@@ -150,6 +150,36 @@
   button.principal:hover:not(:disabled){background:#1fb8d4; color:#05070d}
   .fila{display:flex; flex-wrap:wrap; gap:calc(var(--u)*2); align-items:center}
 
+  /* --------------------- barras de desplazamiento ---------------------
+     La barra del sistema es gris y gruesa: al lado de una interfaz de pixel
+     art se ve como una pieza de otro programa. Se dibuja una propia con los
+     colores del juego. scrollbar-* lo entiende Firefox; ::-webkit-* el resto. */
+  .pantalla, #editor, #consola, #casos, #editorCaja{
+    scrollbar-width:thin;
+    scrollbar-color:#3f5178 #070b14;
+  }
+  .pantalla::-webkit-scrollbar,
+  #editor::-webkit-scrollbar,
+  #consola::-webkit-scrollbar{
+    width:calc(var(--u)*3); height:calc(var(--u)*3);
+  }
+  .pantalla::-webkit-scrollbar-track,
+  #editor::-webkit-scrollbar-track,
+  #consola::-webkit-scrollbar-track{
+    background:#070b14;
+    border-left:calc(var(--u)*1) solid var(--linea);
+  }
+  .pantalla::-webkit-scrollbar-thumb,
+  #editor::-webkit-scrollbar-thumb,
+  #consola::-webkit-scrollbar-thumb{
+    background:#3f5178;
+    border:calc(var(--u)*1) solid #070b14;
+  }
+  .pantalla::-webkit-scrollbar-thumb:hover,
+  #editor::-webkit-scrollbar-thumb:hover,
+  #consola::-webkit-scrollbar-thumb:hover{ background:var(--cian) }
+  .pantalla::-webkit-scrollbar-corner{ background:#070b14 }
+
   /* ---------------------------- editor ------------------------------- */
   #editorCaja{
     display:flex; background:#070b14; border:calc(var(--u)*1) solid var(--linea);
@@ -231,13 +261,13 @@
         <!-- ---------------------- pantalla de inicio ------------------- -->
         <div id="pInicio" class="pantalla visible">
           <div class="marco">
-            <h1>SECCIÓN 7<br>AGENCIA DE DATOS</h1>
+            <h1>SECCION 7<br>AGENCIA DE DATOS</h1>
             <p class="tenue">
               El índice central de la Agencia se corrompió esta madrugada. Ningún
               departamento puede leer sus propios archivos. Tu escuadrón acaba de
               ser asignado al caso.
             </p>
-            <p>NOMBRE DEL ESCUADRÓN:</p>
+            <p>NOMBRE DEL ESCUADRON:</p>
             <input type="text" id="inNombreEquipo" maxlength="18" placeholder="Los Bytes Locos" autocomplete="off">
             <div class="fila">
               <button id="btnJugar" class="principal">▶ ENTRAR</button>
@@ -265,7 +295,7 @@
             </div>
 
             <div id="modoCodigo">
-              <p class="tenue">TU CÓDIGO EN PYTHON <span class="atajo">— Ctrl+Enter para ejecutar</span></p>
+              <p class="tenue">TU CODIGO EN PYTHON <span class="atajo">— Ctrl+Enter para ejecutar</span></p>
               <div id="interprete"></div>
               <div id="editorCaja">
                 <div id="numeros">1</div>
@@ -281,7 +311,7 @@
             <div class="fila">
               <button id="btnEnviar" class="principal">▶ EJECUTAR</button>
               <button id="btnPista">? PISTA (−25)</button>
-              <button id="btnReiniciarCodigo">↺ CÓDIGO INICIAL</button>
+              <button id="btnReiniciarCodigo">↺ CODIGO INICIAL</button>
               <button id="btnCerrarReto">✕ SALIR</button>
             </div>
           </div>
@@ -290,7 +320,7 @@
         <!-- ------------------------ pantalla final --------------------- -->
         <div id="pFinal" class="pantalla">
           <div class="marco">
-            <h1 id="finTitulo">ÍNDICE RESTAURADO</h1>
+            <h1 id="finTitulo">INDICE RESTAURADO</h1>
             <div id="finTexto"></div>
             <div class="fila"><button id="btnReiniciar">↺ NUEVA PARTIDA</button></div>
           </div>

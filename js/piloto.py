@@ -62,11 +62,16 @@ def igual(a, b):
 
 
 def ver(v):
-    """Cómo se le muestra un valor al equipo."""
+    """Cómo se le muestra un valor al equipo.
+
+    Con repr y no con json.dumps: el equipo escribe Python, así que lo que
+    obtuvo tiene que verse como Python. json.dumps devolvería null, true y
+    false, que en Python no existen y solo confunden.
+    """
     try:
-        return json.dumps(_normalizar(v), ensure_ascii=False)
-    except (TypeError, ValueError):
-        return repr(v)
+        return repr(_normalizar(v))
+    except Exception:
+        return str(v)
 
 
 def revisar(codigo):

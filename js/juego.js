@@ -319,6 +319,15 @@ function caraDe(def) {
   } catch (e) { return null; }
 }
 
+/* La tipografía del juego (Press Start 2P) no trae las mayúsculas acentuadas:
+   al escribir "SECCIÓN" el navegador sustituye la Ó por otra fuente y salta a
+   la vista. En minúscula sí existen, así que los acentos se conservan en todo
+   el texto corrido; solo se quitan en los rótulos que van en versales.
+   Si algún día se cambia de tipografía, basta con borrar esta función. */
+function mayus(s) {
+  return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
+}
+
 function conNombre(s) { return String(s).replace(/\{equipo\}/g, estado.equipo || "escuadrón"); }
 
 function hablar(nombre, lineas, retrato, alCerrar) {
@@ -370,7 +379,7 @@ function vigilarSala() {
   const id = s ? s.id : null;
   if (id && id !== salaActual) {
     salaActual = id;
-    elSala.textContent = s.nombre;
+    elSala.textContent = mayus(s.nombre);
     elSala.classList.add("visible");
     salaHasta = tiempoTotal + 2.2;
   } else if (!id) {
@@ -485,6 +494,28 @@ function escapar(s) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
   });
 }
+/* Los casos se escriben en JavaScript pero el equipo programa en Python, así
+   que hay que mostrarlos como los escribirían ellos. Con JSON.stringify salía
+   null, true y false: sintaxis de otro lenguaje colada en los ejemplos, y un
+   chico que copie eso se lleva un error de sintaxis. */
+function verPython(v) {
+  if (v === null || v === undefined) return "None";
+  if (v === true) return "True";
+  if (v === false) return "False";
+  if (typeof v === "number") return String(v);
+  if (typeof v === "string") return JSON.stringify(v);
+  if (Array.isArray(v)) return "[" + v.map(verPython).join(", ") + "]";
+  if (typeof v === "object") {
+    return "{" + Object.keys(v).map(function (k) {
+      return JSON.stringify(k) + ": " + verPython(v[k]);
+    }).join(", ") + "}";
+  }
+  return String(v);
+}
+function argsPython(entrada) {
+  return (entrada || []).map(verPython).join(", ");
+}
+
 function casosVisibles(r) { return r.casos || []; }
 function casosTodos(r) { return (r.casos || []).concat(r.casosOcultos || []); }
 
@@ -495,9 +526,8 @@ function pintarCasos(resultados) {
     const r = resultados ? resultados[i] : null;
     const clase = r ? (r.paso ? "caso pasa" : "caso falla") : "caso";
     const marca = r ? (r.paso ? "✓ " : "✗ ") : "· ";
-    let linea = marca + retoActual.funcion + "(" +
-                escapar(JSON.stringify(c.entrada).slice(1, -1)) + ")" +
-                "  <span class='eti'>→ esperado</span> " + escapar(JSON.stringify(c.salida));
+    let linea = marca + retoActual.funcion + "(" + escapar(argsPython(c.entrada)) + ")" +
+                "  <span class='eti'>→ esperado</span> " + escapar(verPython(c.salida));
     if (r && !r.paso) {
       linea += r.fallo
         ? "\n   <span class='eti'>error:</span> " + escapar(r.fallo)
@@ -538,7 +568,7 @@ function abrirReto(reto, id, guardian) {
   retoActual = reto; retoId = id;
   esCodigo = !!(reto.funcion && reto.casos);
   modo = "reto";
-  $("retoGuardian").textContent = guardian.toUpperCase();
+  $("retoGuardian").textContent = mayus(guardian);
   $("retoTitulo").textContent = reto.titulo;
   $("retoEnunciado").textContent = reto.enunciado;
   const ej = $("retoEjemplo");
@@ -684,7 +714,7 @@ function mostrarFinal() {
   const m = Math.floor(estado.segundos / 60), s = Math.floor(estado.segundos % 60);
   $("finTexto").innerHTML =
     JUEGO.final.map(function (l) { return "<p>" + escapar(conNombre(l)) + "</p>"; }).join("") +
-    "<p class='tenue'>ESCUADRÓN: " + escapar(estado.equipo) + "</p>" +
+    "<p class='tenue'>ESCUADRON: " + escapar(estado.equipo) + "</p>" +
     "<p>PUNTAJE FINAL: <span class='ok'>" + estado.puntos + "</span></p>" +
     "<p>TIEMPO: " + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s + "</p>" +
     "<p>CREDENCIALES: " + credenciales() + "/" + totalRetos() + "</p>";
@@ -694,7 +724,7 @@ function mostrarFinal() {
 
 /* ---------------------------------- HUD ----------------------------------- */
 function actualizarHUD() {
-  $("equipo").textContent = (estado.equipo || "EQUIPO").toUpperCase();
+  $("equipo").textContent = mayus(estado.equipo || "EQUIPO");
   $("credenciales").textContent = "CREDENCIALES " + credenciales() + "/" + totalRetos();
   $("puntos").textContent = estado.puntos + " PTS";
   const m = Math.floor(estado.segundos / 60), s = Math.floor(estado.segundos % 60);

@@ -249,6 +249,7 @@ async function principal() {
   pasarDialogo(30);
   comprobar('la bienvenida se cierra con E', !el('dialogo').classList._v);
 
+  let yaRevisadoPython = false;
   for (const npc of JUEGO.npcs.filter(n => n.reto)) {
     S7.jugador.x = (npc.x + 0.5) * S7.T;
     S7.jugador.y = (npc.y + 1.7) * S7.T;
@@ -257,6 +258,16 @@ async function principal() {
     comprobar('se abre el encargo de ' + npc.id, el('pReto').classList._v, el('retoTitulo').textContent);
     comprobar('  el editor arranca con la plantilla',
       el('editor').value.indexOf('def ' + npc.reto.funcion) === 0, el('editor').value.split('\n')[0]);
+
+    if (!yaRevisadoPython) {
+      /* Los casos se escriben en JavaScript pero se le muestran a quien
+         programa en Python: null, true y false no pueden llegar a pantalla. */
+      yaRevisadoPython = true;
+      const ejemplos = el('casos').innerHTML;
+      comprobar('  los ejemplos se muestran en Python, sin null ni true/false',
+        !/null|true|false/.test(ejemplos),
+        (ejemplos.match(/[a-z_]+\([^)]*\)/) || ['sin ejemplos'])[0]);
+    }
 
     el('editor').value = 'def ' + npc.reto.funcion + '(*args):\n    return "nada"\n';
     el('btnEnviar').disparar('click');
@@ -317,6 +328,21 @@ async function principal() {
   comprobar('la partida queda guardada', !!J.disco['seccion7-v1']);
   comprobar('el código escrito se conserva como borrador',
     Object.keys(S7.estado.borradores).length >= 5);
+
+  /* ------------------------------------------ 4b. la interfaz ----------- */
+  titulo('INTERFAZ');
+
+  /* La tipografía no tiene mayúsculas acentuadas: si alguna se cuela en un
+     rótulo, el navegador la sustituye por otra fuente y se nota. */
+  const htmlUI = fs.readFileSync(ruta.join(RAIZ, 'index.html'), 'utf8');
+  const cuerpo = htmlUI.slice(htmlUI.indexOf('<body'));
+  const acentuadas = (cuerpo.match(/[ÁÉÍÓÚÑÜ]/g) || []);
+  comprobar('ningún rótulo lleva mayúsculas acentuadas', acentuadas.length === 0,
+    acentuadas.length ? acentuadas.join(' ') : 'limpio');
+
+  /* La barra de desplazamiento del sistema rompe el estilo del juego. */
+  comprobar('las barras de desplazamiento están personalizadas',
+    /::-webkit-scrollbar-thumb/.test(htmlUI) && /scrollbar-color/.test(htmlUI));
 
   /* --------------------------------------------- 5. teclado ------------- */
   titulo('TECLADO');
