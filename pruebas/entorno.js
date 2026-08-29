@@ -25,6 +25,7 @@ function arrancar() {
           { preventDefault() {}, stopPropagation() {}, target: this }, ev || {})));
       },
       setAttribute(k, v) { this[k] = v; }, appendChild() {}, removeChild() {},
+      firstElementChild: { style: {} },
       contentWindow: { postMessage() {} }, parentNode: null,
       focus() {}, textContent: '', innerHTML: '', value: '', placeholder: '',
       disabled: false, src: '', selectionStart: 0, selectionEnd: 0, scrollTop: 0

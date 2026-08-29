@@ -344,6 +344,73 @@ async function principal() {
   comprobar('las barras de desplazamiento están personalizadas',
     /::-webkit-scrollbar-thumb/.test(htmlUI) && /scrollbar-color/.test(htmlUI));
 
+  /* ------------------------------- 4c. pantalla y avance --------------- */
+  titulo('PANTALLA, ENCARGOS Y EXPERIENCIA');
+
+  /* La ventana se llena con escala ENTERA: en vez de estirar el lienzo, se
+     muestra más mapa. Estirar obligaría a media escala y rompe el pixel art. */
+  [[1366, 768], [1462, 856], [1920, 1080], [2560, 1440]].forEach(([w, h]) => {
+    global.window.innerWidth = w; global.window.innerHeight = h;
+    (J.oyentesVentana.resize || []).forEach(f => f());
+    const esc = Math.max(1, Math.min(Math.floor((w - 24) / 336), Math.floor((h - 24) / 192)));
+    const usoW = J.pantalla.w * esc / w, usoH = J.pantalla.h * esc / h;
+    comprobar('a ' + w + 'x' + h + ' se aprovecha la ventana',
+      usoW > 0.93 && usoH > 0.93 && Number.isInteger(esc),
+      J.pantalla.w + 'x' + J.pantalla.h + ' a ' + esc + 'x  →  ' +
+      Math.round(usoW * 100) + '% x ' + Math.round(usoH * 100) + '%');
+  });
+  comprobar('nunca se ve menos del área mínima',
+    J.pantalla.w >= 336 && J.pantalla.h >= 192, J.pantalla.w + 'x' + J.pantalla.h);
+
+  /* El panel de encargos: se abre con TAB y marca lo ya resuelto.
+     Vuelvo al modo de juego porque el panel no se abre sobre la pantalla
+     final, que es donde quedó la partida simulada. */
+  despejar();
+  S7.modo('juego');
+  tecla('Tab');
+  comprobar('TAB abre la lista de encargos', el('pTareas').classList._v);
+  const lista = el('listaTareas').innerHTML;
+  comprobar('la lista trae los 5 encargos y el final',
+    (lista.match(/class='tarea/g) || []).length === 6,
+    (lista.match(/class='tarea/g) || []).length + ' entradas');
+  comprobar('los encargos resueltos salen marcados',
+    (lista.match(/tarea hecha/g) || []).length === 6, 'resueltos en esta partida');
+  comprobar('la lista dice en qué sala está cada uno', /LABORATORIO DE DATOS|Laboratorio/i.test(lista));
+  tecla('Tab');
+  comprobar('TAB vuelve a cerrarla', !el('pTareas').classList._v);
+
+  /* Experiencia: sube al resolver y también por explorar. */
+  comprobar('la experiencia acompaña al puntaje', S7.estado.xp >= S7.estado.puntos,
+    S7.estado.xp + ' XP con ' + S7.estado.puntos + ' pts');
+  comprobar('conocer gente suma experiencia',
+    Object.keys(S7.estado.vistos).length > 0,
+    Object.keys(S7.estado.vistos).length + ' personajes conocidos');
+
+  /* leer una terminal suma una vez, y solo una */
+  despejar(); S7.modo('juego');
+  const antesXP = S7.estado.xp;
+  const term = JUEGO.terminales[0];
+  S7.jugador.x = (term[0] + 0.5) * S7.T; S7.jugador.y = (term[1] + 1.7) * S7.T;
+  S7.jugador.dir = 'up';
+  tick(); tecla('e'); tick();
+  const trasLeer = S7.estado.xp;
+  comprobar('leer una terminal suma experiencia', trasLeer > antesXP,
+    '+' + (trasLeer - antesXP) + ' XP');
+  despejar(); S7.modo('juego');
+  tick(); tecla('e'); tick();
+  comprobar('releerla no vuelve a sumar', S7.estado.xp === trasLeer, S7.estado.xp + ' XP');
+  despejar();
+  const tope = JUEGO.niveles[JUEGO.niveles.length - 1];
+  const maxRetos = JUEGO.npcs.filter(n => n.reto).reduce((a, n) => a + n.reto.puntos, 0) +
+                   JUEGO.retoFinal.puntos;
+  const maxExplorar = JUEGO.npcs.length * JUEGO.xpExplorar.hablar +
+                      JUEGO.terminales.length * JUEGO.xpExplorar.terminal;
+  comprobar('el rango máximo es alcanzable', tope.xp <= maxRetos + maxExplorar,
+    'tope ' + tope.xp + ' XP, máximo posible ' + (maxRetos + maxExplorar));
+  comprobar('el rango máximo exige además explorar', tope.xp > maxRetos,
+    'resolver todo da ' + maxRetos + ' XP');
+
+
   /* --------------------------------------------- 5. teclado ------------- */
   titulo('TECLADO');
   let bloqueada = false;

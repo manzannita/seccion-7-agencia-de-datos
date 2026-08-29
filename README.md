@@ -51,6 +51,7 @@ computadora. Para volver al CDN, borra `vendor/`.
 |---|---|
 | Mover | `W A S D` o flechas |
 | Hablar / aceptar encargo / leer terminal | `E`, `Espacio` o `Enter` (o clic) |
+| Ver los encargos pendientes | `TAB` o el botón `☰` del HUD |
 | Pantalla completa | `F` o el botón `⛶` del HUD |
 | Ejecutar el código | `Ctrl+Enter` o el botón EJECUTAR |
 | Cerrar | `Esc` |
@@ -59,6 +60,35 @@ Los personajes con un encargo pendiente muestran un **`!`** ámbar sobre la
 cabeza; los ya resueltos, un **`✓`** verde. El progreso se guarda solo en el
 navegador, y **el código escrito se conserva** aunque se cierre la pestaña: el
 botón CONTINUAR devuelve la partida con los borradores intactos.
+
+## La lista de encargos
+
+Lo que dice la directora al empezar no alcanza: son siete salas y cinco
+encargos, y a los diez minutos ya nadie recuerda quién pedía qué. Con `TAB` se
+abre la lista en cualquier momento:
+
+- qué pide cada departamento y **en qué sala está**,
+- cuánto vale,
+- qué ya está resuelto (tachado y en verde),
+- y el reto final, con candado hasta reunir las cinco credenciales.
+
+## Experiencia y rangos
+
+Además del puntaje —que es el marcador de la competencia— hay una barra de
+experiencia con rangos, de *Recluta* a *Jefe de Seccion*.
+
+La experiencia sube al resolver encargos, pero **también por explorar**: 15 XP
+la primera vez que hablan con alguien y 10 XP por cada terminal que leen. Está
+hecho a propósito: resolver los seis retos da 1050 XP y el último rango pide
+1150, así que para llegar hay que haber recorrido el edificio y hablado con la
+gente, no solo acertar.
+
+A diferencia del puntaje, la experiencia **no baja al pedir una pista**: lo
+aprendido no se descuenta.
+
+La tabla de rangos y cuánto da explorar están en `js/retos.js`, en `niveles` y
+`xpExplorar`. Se pueden tocar sin miedo; hay una prueba que avisa si el rango
+máximo queda inalcanzable.
 
 ## La historia
 
@@ -313,6 +343,19 @@ codex-quest/
 
 Todo el arte se **dibuja por código**: no hay imágenes que se pierdan al copiar
 la carpeta, y el edificio sale idéntico en todas las máquinas.
+
+## Por qué el juego llena la pantalla sin estirarse
+
+El lienzo nunca se estira. Estirarlo obligaría a una escala fraccionaria y en
+pixel art eso significa que unos píxeles salen más anchos que otros.
+
+Lo que hace el juego es al revés: elige la mayor **escala entera** que quepa en
+la ventana y después agranda el área visible hasta llenarla. O sea que en una
+pantalla grande no se ven píxeles más gordos: **se ve más edificio**. En una
+ventana de 1462x856 se aprovecha el 98%, con cada píxel del mismo tamaño.
+
+Hay un mínimo garantizado de 21x12 casillas, así que nadie ve menos de lo
+previsto por tener una pantalla chica.
 
 ## Reglas del pixel art
 

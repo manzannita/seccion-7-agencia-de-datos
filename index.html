@@ -64,6 +64,38 @@
   }
   #btnPantalla:hover{border-color:var(--cian); color:var(--cian-claro)}
 
+  #cajaEquipo{min-width:calc(var(--u)*54)}
+  #rango{color:var(--cian-claro); font-size:calc(var(--u)*3.6); margin-top:calc(var(--u)*1)}
+  #barraXP{
+    height:calc(var(--u)*2.5); background:#070b14; margin-top:calc(var(--u)*1.5);
+    border:calc(var(--u)*.5) solid var(--linea);
+  }
+  #barraXP i{
+    display:block; height:100%; width:0%; background:var(--cian);
+    box-shadow:0 0 calc(var(--u)*2) var(--cian); transition:width .5s;
+  }
+  #btnTareas{
+    pointer-events:auto; cursor:pointer; background:rgba(11,16,32,.86);
+    border:calc(var(--u)*1) solid var(--linea); color:var(--tinta);
+    font-family:var(--pixel); font-size:calc(var(--u)*4.5);
+    padding:calc(var(--u)*2.5) calc(var(--u)*3.5);
+  }
+  #btnTareas:hover{border-color:var(--cian); color:var(--cian-claro)}
+
+  /* aviso flotante de experiencia y rango */
+  #logro{
+    position:absolute; left:50%; transform:translateX(-50%); top:calc(var(--u)*30);
+    font-size:calc(var(--u)*4.5); color:var(--cian-claro);
+    background:rgba(11,16,32,.9); border:calc(var(--u)*1) solid var(--cian);
+    padding:calc(var(--u)*2) calc(var(--u)*4);
+    opacity:0; transition:opacity .3s; white-space:nowrap;
+  }
+  #logro.visible{opacity:1}
+  #logro.fuerte{
+    color:var(--ambar); border-color:var(--ambar); font-size:calc(var(--u)*6);
+    box-shadow:0 0 calc(var(--u)*6) rgba(245,193,78,.35);
+  }
+
   /* rótulo de sala al entrar */
   #sala{
     position:absolute; left:0; right:0; top:22%; text-align:center;
@@ -180,6 +212,27 @@
   #consola::-webkit-scrollbar-thumb:hover{ background:var(--cian) }
   .pantalla::-webkit-scrollbar-corner{ background:#070b14 }
 
+  /* ------------------------- lista de encargos ------------------------ */
+  .tarea{
+    display:flex; align-items:flex-start; gap:calc(var(--u)*3);
+    background:#070b14; border-left:calc(var(--u)*1.5) solid var(--linea);
+    padding:calc(var(--u)*3); margin-bottom:calc(var(--u)*2);
+  }
+  .tarea.hecha{border-left-color:var(--verde); opacity:.72}
+  .tarea.bloqueada{border-left-color:#3a4152; opacity:.55}
+  .tarea .marca{font-size:calc(var(--u)*6); line-height:1; flex:0 0 auto; color:var(--ambar)}
+  .tarea.hecha .marca{color:var(--verde)}
+  .tarea.bloqueada .marca{color:#5a6b8c}
+  .tarea .cuerpo{flex:1 1 auto; min-width:0}
+  .tarea .titulo{font-size:var(--texto); color:var(--tinta)}
+  .tarea.hecha .titulo{text-decoration:line-through}
+  .tarea .donde{font-size:calc(var(--texto)*.85); color:#7c8fb0; margin-top:calc(var(--u)*1)}
+  .tarea .premio{
+    flex:0 0 auto; font-size:calc(var(--texto)*.85); color:var(--verde);
+    font-family:var(--mono);
+  }
+  #resumenTareas{margin-top:calc(var(--u)*3); font-size:var(--texto)}
+
   /* ---------------------------- editor ------------------------------- */
   #editorCaja{
     display:flex; background:#070b14; border:calc(var(--u)*1) solid var(--linea);
@@ -235,16 +288,23 @@
       <div id="ui">
 
         <div id="hud">
-          <div class="caja"><span id="equipo">EQUIPO</span></div>
-          <div class="fila" style="gap:calc(var(--u)*2)">
+          <div class="caja" id="cajaEquipo">
+            <div><span id="equipo">EQUIPO</span></div>
+            <div id="rango">RECLUTA</div>
+            <div id="barraXP"><i></i></div>
+          </div>
+          <div class="fila" style="gap:calc(var(--u)*2); align-items:flex-start">
             <div class="caja">
               <span id="credenciales">CREDENCIALES 0/5</span> &nbsp;
               <span id="puntos">0 PTS</span> &nbsp;
               <span id="tiempo">00:00</span>
             </div>
+            <button id="btnTareas" title="Tareas pendientes (TAB)">☰</button>
             <button id="btnPantalla" title="Pantalla completa (F)">⛶</button>
           </div>
         </div>
+
+        <div id="logro"></div>
 
         <div id="sala"></div>
         <div id="aviso">[E] Hablar</div>
@@ -275,9 +335,23 @@
             </div>
             <p class="tenue" style="margin-top:1.4em">
               MOVER: WASD o flechas &nbsp;·&nbsp; HABLAR: E &nbsp;·&nbsp;
-              PANTALLA COMPLETA: F &nbsp;·&nbsp; CERRAR: ESC<br>
+              ENCARGOS: TAB &nbsp;·&nbsp; PANTALLA COMPLETA: F &nbsp;·&nbsp; CERRAR: ESC<br>
               Los retos se resuelven escribiendo <strong>Python</strong> dentro del juego.
             </p>
+          </div>
+        </div>
+
+        <!-- ---------------------- tareas pendientes -------------------- -->
+        <div id="pTareas" class="pantalla">
+          <div class="marco">
+            <h2>ENCARGOS PENDIENTES</h2>
+            <p class="tenue">Cada departamento entrega una credencial a cambio de resolverle
+               su problema. Con las cinco se abre la compuerta del Núcleo.</p>
+            <div id="listaTareas"></div>
+            <div id="resumenTareas" class="tenue"></div>
+            <div class="fila">
+              <button id="btnCerrarTareas">✕ VOLVER AL JUEGO</button>
+            </div>
           </div>
         </div>
 

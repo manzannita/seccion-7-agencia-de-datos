@@ -62,6 +62,24 @@ const JUEGO = {
     "La Sección 7 recordará al escuadrón {equipo}."
   ],
 
+  /* ====================== EXPERIENCIA Y RANGOS ======================
+     El puntaje es el marcador de la competencia. La experiencia es otra cosa:
+     una barra que sube y da sensación de avance, y que además premia explorar
+     el edificio. Se puede tocar esta tabla sin miedo. */
+  niveles: [
+    { xp: 0,    nombre: "Recluta" },
+    { xp: 150,  nombre: "Analista Junior" },
+    { xp: 350,  nombre: "Analista" },
+    { xp: 600,  nombre: "Agente de Datos" },
+    { xp: 850,  nombre: "Agente Senior" },
+    /* 1150 no se alcanza solo resolviendo (los retos dan 1050): el ultimo
+       rango exige ademas haber recorrido el edificio y hablado con la gente. */
+    { xp: 1150, nombre: "Jefe de Seccion" }
+  ],
+  /* XP suelta por explorar: hablar con alguien por primera vez y leer una
+     terminal. Así recorrer el edificio también suma, no solo acertar. */
+  xpExplorar: { hablar: 15, terminal: 10 },
+
   /* =========================== PERSONAJES =========================== */
   npcs: [
 

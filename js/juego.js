@@ -11,21 +11,53 @@ const A = window.CQ.arte, M = window.CQ.mapa, EJEC = window.CQ.codigo;
 const S = A.SUELO, O = A.OBJETO;
 
 const T = 16;                    /* lado de la casilla */
-const VW = 336, VH = 192;        /* resolución lógica: 21 x 12 casillas */
+/* Resolución lógica. NO es fija: se recalcula al cambiar el tamaño de la
+   ventana. Estirar el canvas para llenar la pantalla obligaría a una escala
+   fraccionaria, y ahí unos píxeles salen más anchos que otros y el pixel art
+   se rompe. En vez de estirar, se mantiene la escala entera y se MUESTRA MÁS
+   MAPA: la ventana se llena y cada píxel sigue midiendo lo mismo. */
+const VW_MIN = 336, VH_MIN = 192;   /* lo mínimo que se ve: 21 x 12 casillas */
+let VW = VW_MIN, VH = VH_MIN;
 const VEL = 66;                  /* px por segundo */
 const CLAVE = "seccion7-v1";
 
 const $ = function (id) { return document.getElementById(id); };
 const pantalla = $("pantalla"), ctx = pantalla.getContext("2d");
-pantalla.width = VW; pantalla.height = VH;
 ctx.imageSmoothingEnabled = false;
 
 /* --------------------------------- estado -------------------------------- */
 const estado = {
-  equipo: "", puntos: 0,
+  equipo: "", puntos: 0, xp: 0,
   resueltos: {}, pistas: {}, intentos: {}, borradores: {},
+  vistos: {}, leidos: {},          /* a quién ya saludaron, qué ya leyeron */
   segundos: 0, vioIntro: false, terminado: false
 };
+
+/* ------------------------------ experiencia ------------------------------
+   El puntaje es el marcador de la competencia; la experiencia es la sensación
+   de avance, y premia además recorrer el edificio. Son dos cosas distintas a
+   propósito: bajar de puntos por una pista no debería borrar lo aprendido. */
+function niveles() { return JUEGO.niveles || [{ xp: 0, nombre: "Recluta" }]; }
+function nivelDe(xp) {
+  const t = niveles();
+  let i = 0;
+  for (let k = 0; k < t.length; k++) if (xp >= t[k].xp) i = k;
+  return i;
+}
+function nivelActual() { return niveles()[nivelDe(estado.xp)]; }
+function siguienteNivel() { return niveles()[nivelDe(estado.xp) + 1] || null; }
+function sumarXP(cuanto, motivo) {
+  if (!cuanto) return;
+  const antes = nivelDe(estado.xp);
+  estado.xp += cuanto;
+  const ahora = nivelDe(estado.xp);
+  anunciar("+" + cuanto + " XP" + (motivo ? "  " + motivo : ""));
+  if (ahora > antes) {
+    setTimeout(function () { anunciar("NUEVO RANGO: " + mayus(niveles()[ahora].nombre), true); }, 1200);
+    sfx.subir();
+  }
+  guardar();
+}
 function conRetos() { return JUEGO.npcs.filter(function (n) { return n.reto; }); }
 function credenciales() {
   return conRetos().filter(function (n) { return estado.resueltos[n.id]; }).length;
@@ -65,7 +97,9 @@ const sfx = {
   paso:  function () { tono(110 + Math.random() * 25, 0.035, "triangle", 0.014); },
   abrir: function () { tono(400, 0.05); setTimeout(function () { tono(600, 0.07); }, 60); },
   puerta:function () { tono(180, 0.25, "sawtooth", 0.05);
-                       setTimeout(function () { tono(320, 0.3, "square", 0.04); }, 200); }
+                       setTimeout(function () { tono(320, 0.3, "square", 0.04); }, 200); },
+  subir: function () { [523, 659, 784, 1047].forEach(function (f, i) {
+                         setTimeout(function () { tono(f, 0.12, "square", 0.045); }, i * 110); }); }
 };
 
 /* -------------------------------- entidades ------------------------------ */
@@ -372,6 +406,24 @@ function animarDialogo(dt) {
   elSig.textContent = dlg.completo ? (dlg.i < dlg.lineas.length - 1 ? "▼ [E]" : "✕ [E]") : "";
 }
 
+/* -------------------------- avisos flotantes -----------------------------
+   Cola simple: si caen dos avisos juntos (XP y subida de rango) el segundo
+   espera en vez de pisar al primero. */
+const colaAvisos = [];
+let avisoHasta = 0;
+function anunciar(texto, fuerte) { colaAvisos.push({ texto: texto, fuerte: !!fuerte }); }
+function moverAvisos() {
+  const e = $("logro");
+  if (!e) return;
+  if (avisoHasta && tiempoTotal < avisoHasta) return;
+  if (avisoHasta) { e.classList.remove("visible"); avisoHasta = 0; return; }
+  const a = colaAvisos.shift();
+  if (!a) return;
+  e.textContent = a.texto;
+  e.className = "visible" + (a.fuerte ? " fuerte" : "");
+  avisoHasta = tiempoTotal + (a.fuerte ? 2.4 : 1.4);
+}
+
 /* --------------------------- rótulo de sala ------------------------------ */
 let salaActual = null, salaHasta = 0;
 function vigilarSala() {
@@ -415,7 +467,15 @@ function interactuar() {
   if (!o) return;
   sfx.abrir();
 
-  if (o.tipo === "terminal") { hablar("Terminal", o.ref.texto.split("\n")); return; }
+  if (o.tipo === "terminal") {
+    const clave = o.ref.tx + "," + o.ref.ty;
+    if (!estado.leidos[clave]) {
+      estado.leidos[clave] = true;
+      sumarXP((JUEGO.xpExplorar || {}).terminal || 0, "· terminal nueva");
+    }
+    hablar("Terminal", o.ref.texto.split("\n"));
+    return;
+  }
 
   if (o.tipo === "compuerta" || o.tipo === "consola") {
     const f = JUEGO.retoFinal;
@@ -441,6 +501,10 @@ function interactuar() {
 
   const n = o.ref, d = n.def;
   n.dir = { up: "down", down: "up", left: "right", right: "left" }[jugador.dir];
+  if (!estado.vistos[d.id]) {
+    estado.vistos[d.id] = true;
+    sumarXP((JUEGO.xpExplorar || {}).hablar || 0, "· conociste a " + d.nombre.split(",")[0]);
+  }
 
   if (!d.reto) {
     const listo = credenciales() >= totalRetos();
@@ -612,6 +676,7 @@ function cerrarReto() {
 function acertar(ganados) {
   estado.puntos += ganados;
   estado.resueltos[retoId] = true;
+  sumarXP(ganados, "· encargo resuelto");
   guardar(); sfx.ok();
   const est = $("retoEstado");
   est.className = "ok";
@@ -708,6 +773,57 @@ function pedirPista() {
   $("btnPista").disabled = true;
 }
 
+/* --------------------------- encargos pendientes -------------------------
+   Lo que dice la directora al principio no alcanza: son siete salas y cinco
+   encargos, y a los diez minutos ya nadie recuerda quién pedía qué. Este
+   panel es la lista, siempre a un TAB de distancia. */
+function pintarTareas() {
+  const salas = {};
+  M.SALAS.forEach(function (x) { salas[x.id] = x.nombre; });
+
+  let html = "";
+  JUEGO.npcs.filter(function (n) { return n.reto; }).forEach(function (n) {
+    const hecho = !!estado.resueltos[n.id];
+    html += "<div class='tarea" + (hecho ? " hecha" : "") + "'>" +
+      "<span class='marca'>" + (hecho ? "✓" : "○") + "</span>" +
+      "<span class='cuerpo'><span class='titulo'>" + escapar(n.reto.titulo) + "</span>" +
+      "<span class='donde'>" + escapar(n.nombre) + " · " +
+      escapar(salas[n.sala] || n.sala || "") + "</span></span>" +
+      "<span class='premio'>" + n.reto.puntos + " pts</span></div>";
+  });
+
+  const listas = credenciales() >= totalRetos();
+  const f = JUEGO.retoFinal;
+  html += "<div class='tarea" + (estado.terminado ? " hecha" : (listas ? "" : " bloqueada")) + "'>" +
+    "<span class='marca'>" + (estado.terminado ? "✓" : (listas ? "○" : "🔒")) + "</span>" +
+    "<span class='cuerpo'><span class='titulo'>" + escapar(f.titulo) + "</span>" +
+    "<span class='donde'>" + (listas
+      ? "La compuerta del Núcleo ya los reconoce. Suban por el pasillo central."
+      : "Se abre con las " + totalRetos() + " credenciales.") + "</span></span>" +
+    "<span class='premio'>" + f.puntos + " pts</span></div>";
+  $("listaTareas").innerHTML = html;
+
+  const sig = siguienteNivel();
+  $("resumenTareas").innerHTML =
+    "Credenciales: <b>" + credenciales() + "/" + totalRetos() + "</b> &nbsp;·&nbsp; " +
+    "Puntaje: <b>" + estado.puntos + "</b> &nbsp;·&nbsp; " +
+    "Rango: <b>" + escapar(nivelActual().nombre) + "</b>" +
+    (sig ? " &nbsp;·&nbsp; faltan <b>" + (sig.xp - estado.xp) + " XP</b> para " +
+           escapar(sig.nombre) : " &nbsp;·&nbsp; rango máximo");
+}
+let modoPrevio = "juego";
+function abrirTareas() {
+  if (modo === "reto" || modo === "final" || modo === "inicio") return;
+  modoPrevio = modo;
+  pintarTareas();
+  $("pTareas").classList.add("visible");
+  modo = "tareas";
+}
+function cerrarTareas() {
+  $("pTareas").classList.remove("visible");
+  modo = modoPrevio === "tareas" ? "juego" : modoPrevio;
+}
+
 /* ------------------------------ pantalla final ---------------------------- */
 function mostrarFinal() {
   modo = "final";
@@ -725,6 +841,11 @@ function mostrarFinal() {
 /* ---------------------------------- HUD ----------------------------------- */
 function actualizarHUD() {
   $("equipo").textContent = mayus(estado.equipo || "EQUIPO");
+  $("rango").textContent = mayus(nivelActual().nombre) + "  " + estado.xp + " XP";
+  const sig = siguienteNivel(), base = nivelActual().xp;
+  const pct = sig ? Math.min(100, ((estado.xp - base) / (sig.xp - base)) * 100) : 100;
+  const relleno = $("barraXP") && $("barraXP").firstElementChild;
+  if (relleno) relleno.style.width = pct.toFixed(1) + "%";
   $("credenciales").textContent = "CREDENCIALES " + credenciales() + "/" + totalRetos();
   $("puntos").textContent = estado.puntos + " PTS";
   const m = Math.floor(estado.segundos / 60), s = Math.floor(estado.segundos % 60);
@@ -734,11 +855,24 @@ function actualizarHUD() {
 /* ----------------------- escala y pantalla completa ----------------------- */
 const elEscenario = $("escenario"), elMarco = $("marco");
 function ajustar() {
-  const enPantallaCompleta = !!document.fullscreenElement;
-  const anchoDisp = enPantallaCompleta ? window.innerWidth : window.innerWidth - 24;
-  const altoDisp = enPantallaCompleta ? window.innerHeight : window.innerHeight - 24;
-  /* escala entera siempre: media escala emborrona el pixel art */
-  const escala = Math.max(1, Math.min(Math.floor(anchoDisp / VW), Math.floor(altoDisp / VH)));
+  const completa = !!document.fullscreenElement;
+  const anchoDisp = completa ? window.innerWidth : window.innerWidth - 24;
+  const altoDisp = completa ? window.innerHeight : window.innerHeight - 24;
+
+  /* 1. La escala es SIEMPRE entera. Se elige la mayor que permita ver al
+        menos el área mínima. */
+  const escala = Math.max(1, Math.min(Math.floor(anchoDisp / VW_MIN),
+                                      Math.floor(altoDisp / VH_MIN)));
+  /* 2. Con esa escala fija, el lienzo crece hasta llenar la ventana. Se ve
+        más edificio, no píxeles más grandes. Nunca más que el mapa entero. */
+  VW = Math.min(Math.floor(anchoDisp / escala), M.AN * T);
+  VH = Math.min(Math.floor(altoDisp / escala), M.AL * T);
+  VW -= VW % 2; VH -= VH % 2;                 /* par: la viñeta queda centrada */
+
+  if (pantalla.width !== VW || pantalla.height !== VH) {
+    pantalla.width = VW; pantalla.height = VH;
+    ctx.imageSmoothingEnabled = false;        /* redimensionar reinicia el contexto */
+  }
   pantalla.style.width = (VW * escala) + "px";
   pantalla.style.height = (VH * escala) + "px";
   elMarco.style.width = (VW * escala) + "px";
@@ -765,7 +899,13 @@ const MAPA_TECLAS = {
 window.addEventListener("keydown", function (e) {
   if (e.key === "Escape") {
     if (modo === "reto") cerrarReto();
+    else if (modo === "tareas") cerrarTareas();
     else if (modo === "dialogo") cerrarDialogo();
+    return;
+  }
+  if (e.key === "Tab") {
+    e.preventDefault();
+    if (modo === "tareas") cerrarTareas(); else abrirTareas();
     return;
   }
   /* mientras se escribe en un campo o en el editor, el juego no toca el teclado:
@@ -798,7 +938,8 @@ function bucle(t) {
 
   if (modo === "juego") { estado.segundos += dt; mover(dt); vigilarAviso(); vigilarSala(); }
   else if (modo === "dialogo") { estado.segundos += dt; animarDialogo(dt); }
-  else if (modo === "reto") { estado.segundos += dt; }
+  else if (modo === "reto" || modo === "tareas") { estado.segundos += dt; }
+  moverAvisos();
 
   if (modo !== "inicio") { seguirCamara(); dibujarEscena(); actualizarHUD(); }
   requestAnimationFrame(bucle);
@@ -843,8 +984,9 @@ function conectar() {
   const inNombre = $("inNombreEquipo");
   $("btnJugar").addEventListener("click", function () {
     estado.equipo = ((inNombre.value || "").trim() || "Escuadrón sin nombre").slice(0, 18);
-    estado.puntos = 0; estado.resueltos = {}; estado.pistas = {};
+    estado.puntos = 0; estado.xp = 0; estado.resueltos = {}; estado.pistas = {};
     estado.intentos = {}; estado.borradores = {}; estado.segundos = 0;
+    estado.vistos = {}; estado.leidos = {};
     estado.vioIntro = false; estado.terminado = false;
     M.construir(); colocarEntidades();
     empezar(true);
@@ -870,6 +1012,10 @@ function conectar() {
     if (e.key === "Enter") { e.preventDefault(); enviar(); }
   });
   $("btnPantalla").addEventListener("click", alternarPantallaCompleta);
+  $("btnTareas").addEventListener("click", function () {
+    if (modo === "tareas") cerrarTareas(); else abrirTareas();
+  });
+  $("btnCerrarTareas").addEventListener("click", cerrarTareas);
   $("btnReiniciar").addEventListener("click", function () {
     try { localStorage.removeItem(CLAVE); } catch (e) {}
     location.reload();
