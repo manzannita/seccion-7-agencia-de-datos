@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Generador de respuestas — SECCIÓN 7</title>
+<style>
+ body{font-family:system-ui,sans-serif;background:#0b1020;color:#dbe6f5;padding:2rem;line-height:1.6}
+ h1{font-size:1.3rem;color:#f5c14e}
+ input{width:100%;max-width:520px;padding:.7rem;font-size:1rem;background:#070b14;
+       color:#dbe6f5;border:1px solid #293754;border-radius:4px}
+ code{background:#070b14;padding:.3rem .6rem;border-radius:4px;color:#6ee8f7;font-size:1.1rem}
+ .caja{background:#182339;padding:1rem 1.2rem;border-radius:6px;max-width:560px;margin-top:1rem}
+ small{color:#7c8fb0}
+</style>
+</head>
+<body>
+  <h1>Generador de respuestas · SECCIÓN 7</h1>
+  <p>Solo hace falta para los retos de <strong>respuesta escrita</strong>. Los retos de
+     código se corrigen solos con sus casos de prueba y no llevan hash.</p>
+  <p>Escribe la respuesta correcta y copia la huella en <code>respuestaHash</code>
+     dentro de <code>js/retos.js</code>.</p>
+  <input id="ent" placeholder="escribe la respuesta correcta..." autofocus>
+  <div class="caja">
+    <p>Normalizada: <code id="norm">—</code></p>
+    <p>respuestaHash: <code id="out">—</code></p>
+    <small>La comparación ignora mayúsculas, tildes y signos de puntuación.
+           "Código Secreto" y "codigo secreto" valen igual.</small>
+  </div>
+<script>
+function normalizar(s){
+  return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+}
+function hash(s){
+  let h=0x811c9dc5; s=normalizar(s);
+  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,0x01000193)>>>0; }
+  return ("0000000"+h.toString(16)).slice(-8);
+}
+const ent=document.getElementById("ent");
+ent.addEventListener("input",function(){
+  const v=ent.value;
+  document.getElementById("norm").textContent = normalizar(v) || "—";
+  document.getElementById("out").textContent  = v ? hash(v) : "—";
+});
+</script>
+</body>
+</html>

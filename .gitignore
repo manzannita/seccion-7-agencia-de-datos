@@ -1,0 +1,22 @@
+# Intérprete de Python guardado para jugar sin internet (13 MB).
+# Se recupera con: python herramientas/descargar_python.py
+vendor/
+
+# Caché de Python
+__pycache__/
+*.pyc
+
+# Herramientas de terceros instaladas en la carpeta, ajenas al juego
+.agents/
+.claude/
+skills-lock.json
+
+# Material personal de referencia: fotos usadas para dibujar los personajes.
+# Se quedan en la máquina, no van al repositorio.
+fotos_forpix/
+*.jpeg
+*.jpg
+
+# Basura del sistema
+Thumbs.db
+.DS_Store

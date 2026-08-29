@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SECCIÓN 7 — Agencia de Datos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* --u = 1 pixel del juego en pixeles de pantalla. juego.js lo recalcula. */
+    --u: 3px;
+    --pixel: "Press Start 2P", "Courier New", monospace;
+    --mono: "Consolas", "Menlo", "DejaVu Sans Mono", monospace;
+    --tinta:#dbe6f5;
+    --panel:#0b1020;
+    --linea:#293754;
+    --cian:#1fb8d4;
+    --cian-claro:#6ee8f7;
+    --ambar:#f5c14e;
+    --verde:#5fce84;
+    --rojo:#f0788c;
+    /* texto de las pantallas de reto: legible siempre, no crece sin control */
+    --texto: clamp(11px, calc(var(--u) * 3.6), 17px);
+    --codigo: clamp(11px, calc(var(--u) * 3.4), 16px);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#05070d; color:var(--tinta); font-family:var(--pixel);
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  #escenario{display:flex; align-items:center; justify-content:center; background:#05070d}
+  #escenario:fullscreen{width:100vw; height:100vh}
+  #marco{position:relative; line-height:0}
+  canvas#pantalla{
+    display:block; image-rendering:pixelated; image-rendering:crisp-edges;
+    background:#05070d;
+    box-shadow:0 0 0 2px #0b1020, 0 0 0 4px #293754, 0 18px 60px rgba(0,0,0,.9);
+  }
+  #escenario:fullscreen canvas#pantalla{box-shadow:none}
+
+  #ui{position:absolute; inset:0; line-height:1.6; pointer-events:none}
+
+  /* ------------------------------- HUD ------------------------------- */
+  #hud{
+    position:absolute; top:0; left:0; right:0; display:flex;
+    justify-content:space-between; align-items:flex-start;
+    padding:calc(var(--u)*4); gap:calc(var(--u)*3);
+    font-size:calc(var(--u)*4.5); text-shadow:0 calc(var(--u)*1) 0 #000;
+  }
+  #hud .caja{
+    background:rgba(11,16,32,.86); border:calc(var(--u)*1) solid var(--linea);
+    padding:calc(var(--u)*2.5) calc(var(--u)*3.5);
+  }
+  #credenciales{color:var(--ambar)}
+  #puntos{color:var(--verde)}
+  #btnPantalla{
+    pointer-events:auto; cursor:pointer; background:rgba(11,16,32,.86);
+    border:calc(var(--u)*1) solid var(--linea); color:var(--tinta);
+    font-family:var(--pixel); font-size:calc(var(--u)*4.5);
+    padding:calc(var(--u)*2.5) calc(var(--u)*3.5);
+  }
+  #btnPantalla:hover{border-color:var(--cian); color:var(--cian-claro)}
+
+  /* rótulo de sala al entrar */
+  #sala{
+    position:absolute; left:0; right:0; top:22%; text-align:center;
+    font-size:calc(var(--u)*7); color:var(--cian-claro);
+    text-shadow:0 0 calc(var(--u)*3) rgba(31,184,212,.8), 0 calc(var(--u)*1) 0 #000;
+    opacity:0; transition:opacity .4s;
+  }
+  #sala.visible{opacity:1}
+
+  /* ---------------------------- diálogo ------------------------------ */
+  #dialogo{
+    position:absolute; left:calc(var(--u)*6); right:calc(var(--u)*6); bottom:calc(var(--u)*6);
+    background:rgba(11,16,32,.97); border:calc(var(--u)*1.5) solid var(--cian);
+    padding:calc(var(--u)*5); display:none;
+    box-shadow:0 0 calc(var(--u)*6) rgba(31,184,212,.25), inset 0 0 0 calc(var(--u)*1) #0b1020;
+  }
+  #dialogo.visible{display:flex; gap:calc(var(--u)*4)}
+  #dlgRetrato{
+    /* 32, no 30: el retrato mide 32 px y --u es un píxel del juego, así que
+       cada píxel del retrato ocupa exactamente uno. Con 30 el escalado deja
+       de ser entero, unos píxeles salen más anchos que otros y todos los
+       bordes se ven rotos por muy limpio que esté el dibujo. */
+    width:calc(var(--u)*32); height:calc(var(--u)*32); flex:0 0 auto; display:none;
+    image-rendering:pixelated; border:calc(var(--u)*1) solid var(--linea);
+    background:#0b1020;
+    /* contain, no stretch: un retrato que no sea cuadrado se deformaría */
+    object-fit:contain;
+  }
+  #dlgRetrato.visible{display:block}
+  #dlgCuerpo{flex:1 1 auto; min-width:0}
+  #dlgNombre{color:var(--cian-claro); font-size:calc(var(--u)*4.5); margin-bottom:calc(var(--u)*3)}
+  #dlgTexto{font-size:calc(var(--u)*5); min-height:calc(var(--u)*22)}
+  #dlgSig{
+    position:absolute; right:calc(var(--u)*5); bottom:calc(var(--u)*2);
+    font-size:calc(var(--u)*4); color:var(--cian);
+    animation:parpadeo 1s steps(2) infinite;
+  }
+  @keyframes parpadeo{50%{opacity:0}}
+
+  #aviso{
+    position:absolute; left:50%; transform:translateX(-50%); bottom:calc(var(--u)*6);
+    font-size:calc(var(--u)*4.5); background:rgba(11,16,32,.92);
+    border:calc(var(--u)*1) solid var(--cian); color:var(--cian-claro);
+    padding:calc(var(--u)*2.5) calc(var(--u)*4); display:none;
+  }
+  #aviso.visible{display:block}
+</style>
+<style>
+  /* ------------------------- pantallas completas --------------------- */
+  .pantalla{
+    position:absolute; inset:0; display:none; overflow-y:auto;
+    background:rgba(5,7,13,.96); padding:calc(var(--u)*5); pointer-events:auto;
+  }
+  .pantalla.visible{display:block}
+  .marco{
+    border:calc(var(--u)*1.5) solid var(--linea); background:var(--panel);
+    padding:calc(var(--u)*5); max-width:min(96%, 900px); margin:0 auto;
+  }
+  .pantalla h1{font-size:calc(var(--u)*8); color:var(--cian-claro); line-height:1.5;
+               margin-bottom:calc(var(--u)*4)}
+  .pantalla h2{font-size:calc(var(--u)*5.5); color:var(--ambar); margin-bottom:calc(var(--u)*3)}
+  .pantalla p{font-size:var(--texto); margin-bottom:calc(var(--u)*3); line-height:1.7}
+  .tenue{color:#7c8fb0; font-size:calc(var(--texto) * .92)}
+  .ok{color:var(--verde)} .mal{color:var(--rojo)}
+  pre, code{font-family:var(--mono)}
+  .pantalla pre.datos{
+    font-size:var(--codigo); background:#070b14; border-left:calc(var(--u)*1.5) solid var(--cian);
+    padding:calc(var(--u)*3); margin-bottom:calc(var(--u)*3);
+    white-space:pre-wrap; color:#a9c8e8; line-height:1.6;
+  }
+  input[type=text]{
+    font-family:var(--pixel); font-size:var(--texto); background:#070b14; color:var(--tinta);
+    border:calc(var(--u)*1) solid var(--linea); padding:calc(var(--u)*3); width:100%; outline:none;
+  }
+  input[type=text]:focus{border-color:var(--cian)}
+  button{
+    font-family:var(--pixel); font-size:calc(var(--texto)*.95);
+    background:#1b2740; color:var(--tinta); border:calc(var(--u)*1) solid var(--linea);
+    padding:calc(var(--u)*3) calc(var(--u)*4); cursor:pointer; margin-top:calc(var(--u)*3);
+  }
+  button:hover:not(:disabled){background:#293754; border-color:var(--cian)}
+  button:disabled{opacity:.45; cursor:default}
+  button.principal{background:#0f6d84; border-color:var(--cian-claro)}
+  button.principal:hover:not(:disabled){background:#1fb8d4; color:#05070d}
+  .fila{display:flex; flex-wrap:wrap; gap:calc(var(--u)*2); align-items:center}
+
+  /* ---------------------------- editor ------------------------------- */
+  #editorCaja{
+    display:flex; background:#070b14; border:calc(var(--u)*1) solid var(--linea);
+    margin-bottom:calc(var(--u)*2); max-height:46vh; overflow:hidden;
+  }
+  #numeros{
+    flex:0 0 auto; padding:calc(var(--u)*2) calc(var(--u)*1.5);
+    font-family:var(--mono); font-size:var(--codigo); line-height:1.55;
+    color:#3f5178; text-align:right; background:#050810; user-select:none;
+    overflow:hidden; white-space:pre;
+  }
+  #editor{
+    flex:1 1 auto; font-family:var(--mono); font-size:var(--codigo); line-height:1.55;
+    background:transparent; color:#cfe3ff; border:none; outline:none; resize:none;
+    padding:calc(var(--u)*2); min-height:34vh; white-space:pre; overflow:auto;
+    tab-size:2;
+  }
+  #interprete{
+    font-family:var(--mono); font-size:calc(var(--codigo)*.95);
+    margin-bottom:calc(var(--u)*2); color:var(--ambar); min-height:1.4em;
+  }
+  #interprete.listo{color:var(--verde)}
+  #interprete.fallo{color:var(--rojo); line-height:1.6}
+  #sintaxis{
+    font-family:var(--mono); font-size:calc(var(--codigo)*.95); min-height:1.6em;
+    margin-bottom:calc(var(--u)*2); color:var(--rojo);
+  }
+  #sintaxis.bien{color:var(--verde)}
+  #casos{margin-bottom:calc(var(--u)*2)}
+  .caso{
+    font-family:var(--mono); font-size:calc(var(--codigo)*.95);
+    padding:calc(var(--u)*1.5) calc(var(--u)*2); margin-bottom:calc(var(--u)*1);
+    background:#070b14; border-left:calc(var(--u)*1.5) solid var(--linea);
+    white-space:pre-wrap; word-break:break-word;
+  }
+  .caso.pasa{border-left-color:var(--verde)}
+  .caso.falla{border-left-color:var(--rojo)}
+  .caso .eti{color:#7c8fb0}
+  #consola{
+    font-size:calc(var(--codigo)*.95); background:#050810; color:#8fb8d8;
+    padding:calc(var(--u)*2); max-height:14vh; overflow:auto; white-space:pre-wrap;
+    display:none; margin-bottom:calc(var(--u)*2);
+  }
+  #consola.visible{display:block}
+  #retoEstado{font-size:var(--texto); min-height:1.8em; margin-top:calc(var(--u)*2)}
+  .atajo{color:#5a6b8c; font-size:calc(var(--codigo)*.9); font-family:var(--mono)}
+</style>
+</head>
+<body>
+  <div id="escenario">
+    <div id="marco">
+      <canvas id="pantalla"></canvas>
+      <div id="ui">
+
+        <div id="hud">
+          <div class="caja"><span id="equipo">EQUIPO</span></div>
+          <div class="fila" style="gap:calc(var(--u)*2)">
+            <div class="caja">
+              <span id="credenciales">CREDENCIALES 0/5</span> &nbsp;
+              <span id="puntos">0 PTS</span> &nbsp;
+              <span id="tiempo">00:00</span>
+            </div>
+            <button id="btnPantalla" title="Pantalla completa (F)">⛶</button>
+          </div>
+        </div>
+
+        <div id="sala"></div>
+        <div id="aviso">[E] Hablar</div>
+
+        <div id="dialogo">
+          <img id="dlgRetrato" alt="">
+          <div id="dlgCuerpo">
+            <div id="dlgNombre"></div>
+            <div id="dlgTexto"></div>
+          </div>
+          <div id="dlgSig">▼ [E]</div>
+        </div>
+
+        <!-- ---------------------- pantalla de inicio ------------------- -->
+        <div id="pInicio" class="pantalla visible">
+          <div class="marco">
+            <h1>SECCIÓN 7<br>AGENCIA DE DATOS</h1>
+            <p class="tenue">
+              El índice central de la Agencia se corrompió esta madrugada. Ningún
+              departamento puede leer sus propios archivos. Tu escuadrón acaba de
+              ser asignado al caso.
+            </p>
+            <p>NOMBRE DEL ESCUADRÓN:</p>
+            <input type="text" id="inNombreEquipo" maxlength="18" placeholder="Los Bytes Locos" autocomplete="off">
+            <div class="fila">
+              <button id="btnJugar" class="principal">▶ ENTRAR</button>
+              <button id="btnContinuar">↺ CONTINUAR</button>
+            </div>
+            <p class="tenue" style="margin-top:1.4em">
+              MOVER: WASD o flechas &nbsp;·&nbsp; HABLAR: E &nbsp;·&nbsp;
+              PANTALLA COMPLETA: F &nbsp;·&nbsp; CERRAR: ESC<br>
+              Los retos se resuelven escribiendo <strong>Python</strong> dentro del juego.
+            </p>
+          </div>
+        </div>
+
+        <!-- ------------------------ pantalla de reto ------------------- -->
+        <div id="pReto" class="pantalla">
+          <div class="marco">
+            <p class="tenue" id="retoGuardian"></p>
+            <h2 id="retoTitulo"></h2>
+            <p id="retoEnunciado"></p>
+            <pre class="datos" id="retoEjemplo"></pre>
+
+            <div id="modoTexto">
+              <p class="tenue">TU RESPUESTA:</p>
+              <input type="text" id="inRespuesta" placeholder="escribe aquí..." autocomplete="off">
+            </div>
+
+            <div id="modoCodigo">
+              <p class="tenue">TU CÓDIGO EN PYTHON <span class="atajo">— Ctrl+Enter para ejecutar</span></p>
+              <div id="interprete"></div>
+              <div id="editorCaja">
+                <div id="numeros">1</div>
+                <textarea id="editor" spellcheck="false" autocomplete="off"
+                          autocorrect="off" autocapitalize="off"></textarea>
+              </div>
+              <div id="sintaxis"></div>
+              <div id="casos"></div>
+              <pre id="consola"></pre>
+            </div>
+
+            <div id="retoEstado"></div>
+            <div class="fila">
+              <button id="btnEnviar" class="principal">▶ EJECUTAR</button>
+              <button id="btnPista">? PISTA (−25)</button>
+              <button id="btnReiniciarCodigo">↺ CÓDIGO INICIAL</button>
+              <button id="btnCerrarReto">✕ SALIR</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ------------------------ pantalla final --------------------- -->
+        <div id="pFinal" class="pantalla">
+          <div class="marco">
+            <h1 id="finTitulo">ÍNDICE RESTAURADO</h1>
+            <div id="finTexto"></div>
+            <div class="fila"><button id="btnReiniciar">↺ NUEVA PARTIDA</button></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="js/arte.js"></script>
+  <script src="js/mapa.js"></script>
+  <script src="js/codigo.js"></script>
+  <script src="js/retos.js"></script>
+  <script src="js/juego.js"></script>
+</body>
+</html>
