@@ -17,8 +17,9 @@ Una hoja de **3 columnas × 4 filas**:
 
 - Los pies van **pegados al borde inferior** de cada cuadro: así el personaje
   se apoya bien en el piso y queda ordenado con los muebles.
-- El cuadro puede medir lo que quieras mientras la hoja sea 3×4. La plantilla
-  usa 16×16 por cuadro (48×64 en total), que es la escala del juego.
+- El cuadro mide **16×24** (la hoja completa, 48×96). El personaje es más alto
+  que la casilla a propósito: con 16×16 la cara tiene 8×8 píxeles y ahí no cabe
+  una expresión.
 - Fondo **transparente**. PNG, nunca JPEG: el JPEG inventa píxeles borrosos
   y destruye el pixel art.
 
@@ -55,9 +56,9 @@ sin romper nada.
 ## Retratos
 
 El retrato se muestra en un cuadro al lado del texto del diálogo. Cualquier
-imagen cuadrada sirve; **32×32 es la escala del juego**.
+imagen cuadrada sirve; **48×48 es la escala del juego**.
 
-Si un personaje no trae `retrato`, el motor le dibuja un busto de 32×32 con su
+Si un personaje no trae `retrato`, el motor le dibuja un busto de 48×48 con su
 paleta, y acepta `lentes: true`, `pelolargo: true` y `robot: true`. O sea que
 nadie se queda sin cara.
 
@@ -66,10 +67,10 @@ nadie se queda sin cara.
 `annabella.png` y `annabella-cara.png` son el caso completo, por si sirven de
 referencia:
 
-- En el **mundo** mide 16 px como todos los demás. A esa escala no cabe el
-  detalle, así que lo que se cuida es la silueta: pelo largo y oscuro, lentes,
-  playera negra con el pin, jeans claros, tenis blancos.
-- El **retrato** es de 32×32 y ahí sí se le ve la cara.
+- En el **mundo** mide 16×24 como todos los demás. A esa escala manda la
+  silueta: pelo largo y oscuro, lentes, playera negra con el pin, jeans claros,
+  tenis blancos.
+- El **retrato** es de 48×48 y ahí sí se le ve la cara.
 
 Ese reparto es la razón de tener las dos cosas: personaje chico para caminar,
 retrato grande para conversar.
@@ -79,8 +80,8 @@ retrato grande para conversar.
 Su arte está escrito como una cuadrícula de letras, una por color:
 
 ```
-sprites/fuente/annabella-sprite.py   el personaje del mundo (16 px)
-sprites/fuente/annabella-cara.py     el retrato (32x32)
+sprites/fuente/annabella-sprite.py   el personaje del mundo (16x24)
+sprites/fuente/annabella-cara.py     el retrato (48x48)
 ```
 
 Cada fila es una línea de texto donde cada letra es un color de la paleta de
@@ -98,11 +99,11 @@ difícil romperlos.
 1. **Derivarlo bajando de resolución una imagen suavizada.** Cada borde lo
    termina decidiendo un promedio borroso y salen dentados. No hay filtro que
    lo arregle: a esta escala los píxeles se ponen a mano.
-2. **Mostrarlo con escala no entera.** Si el cuadro mide 30 y la imagen 32, el
+2. **Mostrarlo con escala no entera.** Si el cuadro mide 30 y la imagen 48, el
    navegador estira unos píxeles y otros no, y los bordes se ven rotos por
    limpio que esté el dibujo. Por eso el cuadro del diálogo mide exactamente
-   32 unidades. Si cambias el tamaño del retrato, ajusta también `#dlgRetrato`
-   en `index.html` a un múltiplo exacto.
+   48 unidades. Si cambias el tamaño del retrato, ajusta también `#dlgRetrato`
+   en `index.html` a un múltiplo exacto. Hay una prueba que lo vigila.
 
 ## Consejos de la casa
 

@@ -215,9 +215,9 @@ mueble, el motor quita el mueble para que no quede atrapado.
 Al hablar con alguien se ve su cara junto al texto. Hay dos formas de tenerla:
 
 - **Archivo propio**: `retrato: "sprites/annabella-cara.png"`. Cualquier imagen
-  cuadrada sirve; 32×32 es la escala del juego.
+  cuadrada sirve; 48×48 es la escala del juego.
 - **Dibujado por el motor**: si el personaje no trae `retrato`, se le dibuja un
-  busto de 32×32 con su propia paleta. **Un guardián nuevo tiene cara sin que
+  busto de 48×48 con su propia paleta. **Un guardián nuevo tiene cara sin que
   nadie dibuje nada.**
 
 El busto dibujado acepta tres rasgos opcionales:
@@ -229,8 +229,9 @@ robot: true        // visor en lugar de ojos
 ```
 
 Annabella es el ejemplo completo: usa `sprites/annabella.png` para el mundo y
-`sprites/annabella-cara.png` para el diálogo. En el mundo mide 16 px como todos
-—a esa escala manda la silueta— y el detalle vive en el retrato.
+`sprites/annabella-cara.png` para el diálogo. En el mundo mide 16×24 como todos
+—a esa escala manda la silueta— y el detalle vive en el retrato de 48×48.
+Sus fuentes editables están en `sprites/fuente/`.
 
 ### Sprites propios
 

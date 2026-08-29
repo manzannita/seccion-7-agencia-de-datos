@@ -156,14 +156,16 @@ function dibujarPersonaje(e, def, frame, resp) {
     return;
   }
   const hoja = A.hojaDe(def.pelo, def.ropa, def.piel);
-  ctx.drawImage(hoja, frame * 16, A.IDX_DIR[e.dir] * 16, 16, 16,
-                dx - 8, dy - 13 + (resp || 0), 16, 16);
+  const W = A.SP_W, H = A.SP_H;
+  /* el ancla son los pies: el sprite crece hacia arriba, nunca hacia abajo */
+  ctx.drawImage(hoja, frame * W, A.IDX_DIR[e.dir] * H, W, H,
+                dx - (W >> 1), dy - H + 3 + (resp || 0), W, H);
 }
 
 /* marcador sobre quien tiene un reto pendiente o resuelto */
 function marcador(e, hecho) {
   const sube = Math.round(Math.sin(tiempoTotal * 3 + e.x) * 1.5);
-  const x = Math.round(e.x - cam.x), y = Math.round(e.y - cam.y) - 24 + sube;
+  const x = Math.round(e.x - cam.x), y = Math.round(e.y - cam.y) - (A.SP_H + 2) + sube;
   A.px(ctx, "#070911", x - 5, y - 1, 11, 11);
   if (hecho) {
     A.px(ctx, A.P.verde[3], x - 3, y + 4, 2, 2); A.px(ctx, A.P.verde[3], x - 1, y + 6, 2, 2);

@@ -100,57 +100,98 @@ const CUERPO = arte.CUERPO = {
   down: [
     "................",
     ".....oooooo.....",
-    "....ohhhhhHo....",
-    "...ohhhhhhhHo...",
-    "...ohssssssHo...",
-    "...osossssoSo...",
-    "...osssssssSo...",
-    "...osssoossSo...",
+    "...oohhhhhhoo...",
+    "..ohhhhhhhhhho..",
+    ".ohhhhhhhhhhhho.",
+    ".ohhhssssssshHo.",
+    ".ohhsoossooshHo.",
+    ".ohhsoossooshHo.",
+    ".ohhssssssssHHo.",
+    ".ohhsssoossshHo.",
+    ".ohhhSSSSSShHHo.",
     "....ooSSSSoo....",
-    "..occccccccCCo..",
-    "..oscccccccCSo..",
-    "..osccccccCCSo..",
+    "..occcccccccco..",
+    "..osccccccccso..",
+    "..osccccccccso..",
+    "..osccccccccso..",
+    "..osccccccCCso..",
     "..oScCCCCCCCSo.."
   ],
   up: [
     "................",
     ".....oooooo.....",
-    "....ohhhhhHo....",
-    "...ohhhhhhhHo...",
-    "...ohhhhhhhHo...",
-    "...ohhhhhhhHo...",
-    "...ohhhhhhhHo...",
-    "...ohHHHHHHHo...",
+    "...oohhhhhhoo...",
+    "..ohhhhhhhhhho..",
+    ".ohhhhhhhhhhhho.",
+    ".ohhhhhhhhhhhHo.",
+    ".ohhhhhhhhhhhHo.",
+    ".ohhhhhhhhhhhHo.",
+    ".ohhhhhhhhhhHHo.",
+    ".ohhhhhhhhhhhHo.",
+    ".ohhhHHHHHHhHHo.",
     "....ooSSSSoo....",
-    "..occccccccCCo..",
-    "..oscccccccCSo..",
-    "..osccccccCCSo..",
+    "..occcccccccco..",
+    "..osccccccccso..",
+    "..osccccccccso..",
+    "..osccccccccso..",
+    "..osccccccCCso..",
     "..oScCCCCCCCSo.."
   ],
   side: [
     "................",
     "....oooooo......",
-    "...ohhhhhHo.....",
-    "..ohhhhhhhHo....",
-    "..osssshhhHo....",
-    "..osossHhhHo....",
-    "..ossssHhhHo....",
-    "..osoosHhhHo....",
+    "..oohhhhhhoo....",
+    ".ohhhhhhhhhho...",
+    "ohhhhhhhhhhhho..",
+    "ohhsssssshhhho..",
+    "ohsoossshhhhho..",
+    "ohsoossshhhhho..",
+    "ohsssssHhhhhho..",
+    "ohsoossHhhhhho..",
+    "ohhSSSSHhhhhho..",
     "...ooSSSSoo.....",
-    "...occccccCCo...",
-    "...osccccccCo...",
-    "...osccccccCo...",
-    "...oScCCCCCCo..."
+    "..occccccccco...",
+    "..oscccccccco...",
+    "..oscccccccco...",
+    "..oscccccccco...",
+    "..osccccccCCo...",
+    "..oScCCCCCCCo..."
   ]
 };
-/* Tres poses de piernas. El ciclo las combina en 4 tiempos: paso, cruce,
-   paso, cruce. Con menos tiempos la caminata parece un salto. */
+/* Piernas: tres poses. El ciclo las combina en 4 tiempos (paso, cruce,
+   paso, cruce), que es lo que hace que no parezca patinar. */
 const PIERNAS = arte.PIERNAS = {
-  quieto: ["...opppppppPo...", "...opppooppPo...", "...obbboobbbo..."],
-  pasoA:  ["...opppppppPo...", "..opppppooppPo..", "..obbbbboobbbo.."],
-  pasoB:  ["...opppppppPo...", "..opppooppppPo..", "..obbboobbbbbo.."]
+  quieto: [
+    "...oppppppppo...",
+    "...oppppppppo...",
+    "...oppppppPPo...",
+    "...opppooppPo...",
+    "...opppooppPo...",
+    "...obbboobbBo..."
+  ],
+  pasoA: [
+    "...oppppppppo...",
+    "...oppppppppo...",
+    "...oppppppPPo...",
+    "..opppppooppPo..",
+    "..opppppooppPo..",
+    "..obbbbboobbBo.."
+  ],
+  pasoB: [
+    "...oppppppppo...",
+    "...oppppppppo...",
+    "...oppppppPPo...",
+    "..opppoopppPPo..",
+    "..opppoopppPPo..",
+    "..obbboobbbBBo.."
+  ]
 };
 arte.CICLO_CAMINAR = [1, 0, 2, 0];
+/* Medida del cuadro. El personaje es MÁS ALTO que la casilla (16): con 16x16
+   la cara tiene 8x8 píxeles y ahí no cabe una expresión. A 24 entran ojos de
+   2x2 y una boca. El mundo sigue en casillas de 16; solo crece el sprite. */
+arte.SP_W = 16;
+arte.SP_H = 24;
 arte.IDX_DIR = { down: 0, up: 1, left: 2, right: 3 };
 
 const PALETA_BASE = {
@@ -184,13 +225,14 @@ arte.hojaDe = function (pelo, ropa, piel) {
   const clave = (pelo || "-") + "|" + (ropa || "-") + "|" + (piel || "-");
   if (cacheSprites[clave]) return cacheSprites[clave];
   const paleta = paletaDe(pelo, ropa, piel);
-  const L = lienzo(48, 64);
+  const W = arte.SP_W, H = arte.SP_H, ALTO_TORSO = CUERPO.down.length;
+  const L = lienzo(W * 3, H * 4);
   ["down", "up", "left", "right"].forEach(function (dir, fy) {
     const cuerpo = CUERPO[dir === "left" || dir === "right" ? "side" : dir];
     const espejo = dir === "right";
     ["quieto", "pasoA", "pasoB"].forEach(function (fr, fx) {
-      pintarFilas(L.cx, cuerpo, paleta, fx * 16, fy * 16, espejo, 16);
-      pintarFilas(L.cx, PIERNAS[fr], paleta, fx * 16, fy * 16 + 13, espejo, 16);
+      pintarFilas(L.cx, cuerpo, paleta, fx * W, fy * H, espejo, W);
+      pintarFilas(L.cx, PIERNAS[fr], paleta, fx * W, fy * H + ALTO_TORSO, espejo, W);
     });
   });
   cacheSprites[clave] = L.cv;
@@ -552,76 +594,91 @@ for (let i = 0; i < 5; i++) {
 
    Campos opcionales del personaje: lentes, pelolargo, robot. */
 const cacheRetratos = {};
+arte.RETRATO = 48;                 /* lado del retrato, en píxeles */
+
 arte.retratoDe = function (def) {
   const clave = [def.id, def.pelo, def.ropa, def.piel, def.lentes, def.pelolargo, def.robot].join("|");
   if (cacheRetratos[clave]) return cacheRetratos[clave];
 
-  const L = lienzo(32, 32), c = L.cx;
+  const R = arte.RETRATO;
+  const L = lienzo(R, R), c = L.cx;
   const N = "#080a12";
   const pelo = def.pelo || "#8a4b2a";
   const ropa = def.ropa || "#2f6f9e";
   const piel = def.piel || "#f0c39c";
   const peloS = oscurecer(pelo, 0.58), peloL = aclarar(pelo, 0.3);
   const ropaS = oscurecer(ropa, 0.62), ropaL = aclarar(ropa, 0.22);
-  const pielS = oscurecer(piel, 0.78);
+  const pielS = oscurecer(piel, 0.78), pielO = oscurecer(piel, 0.55);
+  const largo = !!def.pelolargo;
 
   /* --- hombros --- */
-  px(c, N, 3, 22, 26, 10);
-  px(c, ropa, 4, 23, 24, 9);
-  px(c, ropaL, 4, 23, 24, 2);
-  px(c, ropaS, 21, 25, 7, 7);
-  px(c, N, 15, 23, 2, 9);
+  px(c, N, 3, 34, 42, 14);
+  px(c, ropa, 5, 35, 38, 13);
+  px(c, ropaL, 5, 35, 38, 3);
+  px(c, ropaS, 32, 38, 11, 10);
+  px(c, N, 22, 35, 4, 13);                 /* tapeta del cuello */
 
-  /* --- cuello --- */
-  px(c, N, 12, 18, 8, 5);
-  px(c, pielS, 13, 18, 6, 5);
+  /* --- cuello: pegado al mentón, si no la cabeza queda flotando --- */
+  px(c, N, 18, 31, 12, 6);
+  px(c, pielS, 19, 31, 10, 5);
 
-  /* --- pelo: la masa se redondea arriba, si no parece un casco --- */
-  px(c, N, 10, 1, 12, 3);
-  px(c, N, 8, 2, 16, 4);
-  px(c, N, 6, 4, 20, def.pelolargo ? 21 : 16);
-  px(c, pelo, 11, 2, 10, 3);
-  px(c, pelo, 9, 3, 14, 3);
-  px(c, pelo, 7, 5, 18, def.pelolargo ? 19 : 14);
-  px(c, peloL, 9, 4, 6, 3);
-  px(c, peloS, 20, 6, 4, def.pelolargo ? 17 : 12);
+  /* --- pelo: se redondea arriba, si no parece un casco --- */
+  px(c, N, 15, 2, 18, 4);
+  px(c, N, 12, 4, 24, 4);
+  px(c, N, 9, 6, 30, largo ? 32 : 23);
+  px(c, pelo, 16, 3, 16, 4);
+  px(c, pelo, 13, 5, 22, 3);
+  px(c, pelo, 10, 7, 28, largo ? 30 : 21);
+  px(c, peloL, 13, 6, 9, 5);
+  px(c, peloS, 30, 9, 7, largo ? 26 : 17);
 
   /* --- cara --- */
-  px(c, N, 9, 6, 14, 16);
-  px(c, piel, 10, 7, 12, 14);
-  px(c, pielS, 19, 9, 3, 11);
-  px(c, pielS, 11, 20, 10, 1);
+  px(c, N, 14, 9, 20, 24);
+  px(c, piel, 15, 10, 18, 22);
+  px(c, pielS, 29, 13, 4, 18);
+  px(c, pielS, 16, 30, 16, 2);
 
   /* --- flequillo --- */
-  px(c, pelo, 10, 7, 12, 2);
-  px(c, peloS, 18, 7, 4, 2);
-  px(c, N, 10, 9, 12, 1);
+  px(c, pelo, 15, 10, 18, 4);
+  px(c, peloS, 28, 10, 5, 4);
+  px(c, N, 15, 14, 18, 1);
 
-  const ojoY = 12;
+  const ojoY = 20;
   if (def.robot) {
-    px(c, N, 9, ojoY - 2, 14, 6);
-    px(c, P.cian[1], 10, ojoY - 1, 12, 4);
-    px(c, P.cian[3], 11, ojoY, 4, 1);
-    px(c, P.cian[0], 17, ojoY + 1, 4, 1);
+    px(c, N, 14, ojoY - 3, 20, 9);
+    px(c, P.cian[1], 15, ojoY - 2, 18, 7);
+    px(c, P.cian[3], 17, ojoY - 1, 6, 2);
+    px(c, P.cian[0], 26, ojoY + 3, 6, 2);
   } else {
-    /* ojos */
-    px(c, "#f6f6fb", 12, ojoY, 3, 3); px(c, "#f6f6fb", 17, ojoY, 3, 3);
-    px(c, N, 13, ojoY + 1, 2, 2);     px(c, N, 18, ojoY + 1, 2, 2);
-    px(c, N, 12, ojoY - 1, 3, 1);     px(c, N, 17, ojoY - 1, 3, 1);
-    /* nariz y boca */
-    px(c, pielS, 15, ojoY + 3, 2, 2);
-    px(c, oscurecer(piel, 0.5), 14, 18, 4, 1);
-    px(c, oscurecer(piel, 0.35), 15, 19, 2, 1);
+    px(c, peloS, 17, ojoY - 3, 6, 2);            /* cejas */
+    px(c, peloS, 26, ojoY - 3, 6, 2);
+    /* Ojos de 4x4 con pupila de 2x2. Más grandes se comen la cara: en un
+       retrato chico el ojo pesa mucho más de lo que uno espera. */
+    px(c, "#f6f6fb", 18, ojoY, 4, 4);
+    px(c, "#f6f6fb", 27, ojoY, 4, 4);
+    px(c, N, 19, ojoY + 1, 2, 2);
+    px(c, N, 28, ojoY + 1, 2, 2);
+    px(c, "#ffffff", 19, ojoY + 1, 1, 1);
+    px(c, "#ffffff", 28, ojoY + 1, 1, 1);
+    px(c, pielS, 23, ojoY + 5, 3, 3);            /* nariz */
+    px(c, pielO, 23, ojoY + 7, 3, 1);
+    /* Boca en tono de piel oscurecido y en curva, no una barra negra: una
+       línea recta y oscura a lo ancho de la cara se lee como un ceño. */
+    px(c, oscurecer(piel, 0.42), 21, 29, 6, 1);
+    px(c, oscurecer(piel, 0.58), 20, 29, 1, 1);
+    px(c, oscurecer(piel, 0.58), 27, 29, 1, 1);
+    px(c, oscurecer(piel, 0.72), 22, 30, 4, 1);
 
     if (def.lentes) {
-      /* Cristales como ARO, no como mancha: si se rellenan de blanco tapan
-         los ojos y el personaje pierde la mirada. */
-      const A = "#fffdff";
-      px(c, A, 11, ojoY - 1, 5, 5);  px(c, piel, 12, ojoY, 3, 3);
-      px(c, A, 17, ojoY - 1, 5, 5);  px(c, piel, 18, ojoY, 3, 3);
-      px(c, N, 13, ojoY + 1, 2, 2);  px(c, N, 19, ojoY + 1, 2, 2);
-      px(c, A, 16, ojoY, 1, 1);                       /* puente */
-      px(c, A, 9, ojoY, 2, 1);   px(c, A, 22, ojoY, 1, 1);  /* patillas */
+      /* Aro, no mancha: rellenar el cristal de blanco tapa la mirada. */
+      const A = "#ded3bc";
+      px(c, A, 16, ojoY - 2, 8, 8); px(c, piel, 17, ojoY - 1, 6, 6);
+      px(c, A, 25, ojoY - 2, 8, 8); px(c, piel, 26, ojoY - 1, 6, 6);
+      px(c, "#f6f6fb", 18, ojoY, 4, 4); px(c, "#f6f6fb", 27, ojoY, 4, 4);
+      px(c, N, 19, ojoY + 1, 2, 2);     px(c, N, 28, ojoY + 1, 2, 2);
+      px(c, "#ffffff", 19, ojoY + 1, 1, 1); px(c, "#ffffff", 28, ojoY + 1, 1, 1);
+      px(c, A, 24, ojoY + 1, 1, 1);                        /* puente */
+      px(c, A, 13, ojoY + 1, 3, 1); px(c, A, 33, ojoY + 1, 3, 1);  /* patillas */
     }
   }
 

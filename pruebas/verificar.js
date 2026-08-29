@@ -132,9 +132,11 @@ async function principal() {
       comprobar('existe el sprite de ' + n.nombre, existe, n.sprite);
       if (existe) {
         const m = medirPNG(f), cols = n.columnas || 3, filas = n.filas || 4;
-        comprobar('  la hoja de ' + n.nombre + ' es de ' + cols + 'x' + filas + ' cuadros',
-          !!m && m.w % cols === 0 && m.h % filas === 0,
-          m ? (m.w + 'x' + m.h + ' → cuadro ' + (m.w / cols) + 'x' + (m.h / filas)) : 'no es PNG');
+        const bien = !!m && m.w % cols === 0 && m.h % filas === 0 &&
+                     m.w / cols === CQ.arte.SP_W && m.h / filas === CQ.arte.SP_H;
+        comprobar('  la hoja de ' + n.nombre + ' tiene cuadros de ' +
+          CQ.arte.SP_W + 'x' + CQ.arte.SP_H,
+          bien, m ? (m.w + 'x' + m.h + ' → cuadro ' + (m.w / cols) + 'x' + (m.h / filas)) : 'no es PNG');
       }
     }
     if (n.retrato) {
@@ -149,15 +151,15 @@ async function principal() {
   (function () {
     const html = fs.readFileSync(ruta.join(RAIZ, 'index.html'), 'utf8');
     const m = html.match(/#dlgRetrato\{[^}]*width:calc\(var\(--u\)\*(\d+)\)/);
-    const lado = m ? parseInt(m[1], 10) : 0;
-    comprobar('el cuadro del retrato usa escala entera', lado > 0 && lado % 32 === 0,
-      lado ? lado + 'u para una imagen de 32 px' : 'no encontré la regla CSS');
+    const lado = m ? parseInt(m[1], 10) : 0, R = CQ.arte.RETRATO;
+    comprobar('el cuadro del retrato usa escala entera', lado > 0 && lado % R === 0,
+      lado ? lado + 'u para una imagen de ' + R + ' px' : 'no encontré la regla CSS');
   })();
 
   /* todos los personajes tienen cara, con archivo propio o dibujada */
   JUEGO.npcs.forEach(n => {
     const dibujado = CQ.arte.retratoDe(n);
-    comprobar('  ' + n.nombre + ' tiene retrato', !!n.retrato || (dibujado && dibujado.width === 32),
+    comprobar('  ' + n.nombre + ' tiene retrato', !!n.retrato || (dibujado && dibujado.width === CQ.arte.RETRATO),
       n.retrato ? 'archivo propio' : 'dibujado por código');
   });
 
