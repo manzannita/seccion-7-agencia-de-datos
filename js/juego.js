@@ -358,6 +358,19 @@ function caraDe(def) {
    la vista. En minúscula sí existen, así que los acentos se conservan en todo
    el texto corrido; solo se quitan en los rótulos que van en versales.
    Si algún día se cambia de tipografía, basta con borrar esta función. */
+/* La tipografía tiene las minúsculas acentuadas pero no las MAYÚSCULAS: al
+   escribir "BÓVEDA" o "Índice" el navegador cambia de fuente para ese carácter
+   y salta a la vista. Esta función quita la tilde SOLO a las mayúsculas, así
+   "Criptógrafa Noa" y "Señal en el ruido" se conservan intactas. Se aplica a
+   todo lo que se muestre con la tipografía del juego; el editor y los casos
+   usan monoespaciada, que sí las trae, y esos no se tocan. */
+function pixel(s) {
+  return String(s === null || s === undefined ? "" : s)
+    .replace(/[À-Ý]/g, function (ch) {
+      return ch.normalize("NFD").replace(/[̀-ͯ]/g, "");
+    });
+}
+
 function mayus(s) {
   return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
 }
@@ -370,14 +383,14 @@ function hablar(nombre, lineas, retrato, alCerrar) {
   dlg.completo = false; dlg.alCerrar = alCerrar || null;
   modo = "dialogo";
   elDialogo.classList.add("visible");
-  elNombre.textContent = nombre;
+  elNombre.textContent = pixel(nombre);
   elTexto.textContent = "";
   elAviso.classList.remove("visible");
   if (retrato) { elRetrato.src = retrato; elRetrato.classList.add("visible"); }
   else elRetrato.classList.remove("visible");
 }
 function avanzar() {
-  const linea = conNombre(dlg.lineas[dlg.i] || "");
+  const linea = pixel(conNombre(dlg.lineas[dlg.i] || ""));
   if (dlg.escrito < linea.length) { dlg.escrito = linea.length; dlg.completo = true; return; }
   dlg.completo = true;
   dlg.i++;
@@ -393,7 +406,7 @@ function cerrarDialogo() {
 }
 let acumLetra = 0;
 function animarDialogo(dt) {
-  const linea = conNombre(dlg.lineas[dlg.i] || "");
+  const linea = pixel(conNombre(dlg.lineas[dlg.i] || ""));
   if (dlg.escrito < linea.length) {
     acumLetra += dt;
     while (acumLetra > 0.016 && dlg.escrito < linea.length) {
@@ -503,7 +516,7 @@ function interactuar() {
   n.dir = { up: "down", down: "up", left: "right", right: "left" }[jugador.dir];
   if (!estado.vistos[d.id]) {
     estado.vistos[d.id] = true;
-    sumarXP((JUEGO.xpExplorar || {}).hablar || 0, "· conociste a " + d.nombre.split(",")[0]);
+    sumarXP((JUEGO.xpExplorar || {}).hablar || 0, pixel("· conociste a " + d.nombre.split(",")[0]));
   }
 
   if (!d.reto) {
@@ -633,8 +646,8 @@ function abrirReto(reto, id, guardian) {
   esCodigo = !!(reto.funcion && reto.casos);
   modo = "reto";
   $("retoGuardian").textContent = mayus(guardian);
-  $("retoTitulo").textContent = reto.titulo;
-  $("retoEnunciado").textContent = reto.enunciado;
+  $("retoTitulo").textContent = pixel(reto.titulo);
+  $("retoEnunciado").textContent = pixel(reto.enunciado);
   const ej = $("retoEjemplo");
   ej.textContent = reto.ejemplo || "";
   ej.style.display = reto.ejemplo ? "block" : "none";
@@ -786,9 +799,9 @@ function pintarTareas() {
     const hecho = !!estado.resueltos[n.id];
     html += "<div class='tarea" + (hecho ? " hecha" : "") + "'>" +
       "<span class='marca'>" + (hecho ? "✓" : "○") + "</span>" +
-      "<span class='cuerpo'><span class='titulo'>" + escapar(n.reto.titulo) + "</span>" +
-      "<span class='donde'>" + escapar(n.nombre) + " · " +
-      escapar(salas[n.sala] || n.sala || "") + "</span></span>" +
+      "<span class='cuerpo'><span class='titulo'>" + escapar(pixel(n.reto.titulo)) + "</span>" +
+      "<span class='donde'>" + escapar(pixel(n.nombre)) + " · " +
+      escapar(pixel(salas[n.sala] || n.sala || "")) + "</span></span>" +
       "<span class='premio'>" + n.reto.puntos + " pts</span></div>";
   });
 
@@ -796,7 +809,7 @@ function pintarTareas() {
   const f = JUEGO.retoFinal;
   html += "<div class='tarea" + (estado.terminado ? " hecha" : (listas ? "" : " bloqueada")) + "'>" +
     "<span class='marca'>" + (estado.terminado ? "✓" : (listas ? "○" : "🔒")) + "</span>" +
-    "<span class='cuerpo'><span class='titulo'>" + escapar(f.titulo) + "</span>" +
+    "<span class='cuerpo'><span class='titulo'>" + escapar(pixel(f.titulo)) + "</span>" +
     "<span class='donde'>" + (listas
       ? "La compuerta del Núcleo ya los reconoce. Suban por el pasillo central."
       : "Se abre con las " + totalRetos() + " credenciales.") + "</span></span>" +
@@ -807,9 +820,9 @@ function pintarTareas() {
   $("resumenTareas").innerHTML =
     "Credenciales: <b>" + credenciales() + "/" + totalRetos() + "</b> &nbsp;·&nbsp; " +
     "Puntaje: <b>" + estado.puntos + "</b> &nbsp;·&nbsp; " +
-    "Rango: <b>" + escapar(nivelActual().nombre) + "</b>" +
+    "Rango: <b>" + escapar(pixel(nivelActual().nombre)) + "</b>" +
     (sig ? " &nbsp;·&nbsp; faltan <b>" + (sig.xp - estado.xp) + " XP</b> para " +
-           escapar(sig.nombre) : " &nbsp;·&nbsp; rango máximo");
+           escapar(pixel(sig.nombre)) : " &nbsp;·&nbsp; rango maximo");
 }
 let modoPrevio = "juego";
 function abrirTareas() {
@@ -829,7 +842,7 @@ function mostrarFinal() {
   modo = "final";
   const m = Math.floor(estado.segundos / 60), s = Math.floor(estado.segundos % 60);
   $("finTexto").innerHTML =
-    JUEGO.final.map(function (l) { return "<p>" + escapar(conNombre(l)) + "</p>"; }).join("") +
+    JUEGO.final.map(function (l) { return "<p>" + escapar(pixel(conNombre(l))) + "</p>"; }).join("") +
     "<p class='tenue'>ESCUADRON: " + escapar(estado.equipo) + "</p>" +
     "<p>PUNTAJE FINAL: <span class='ok'>" + estado.puntos + "</span></p>" +
     "<p>TIEMPO: " + (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s + "</p>" +

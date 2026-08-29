@@ -376,6 +376,16 @@ async function principal() {
   comprobar('los encargos resueltos salen marcados',
     (lista.match(/tarea hecha/g) || []).length === 6, 'resueltos en esta partida');
   comprobar('la lista dice en qué sala está cada uno', /LABORATORIO DE DATOS|Laboratorio/i.test(lista));
+  /* el título y el "dónde" tienen que ir en líneas separadas, no pegados */
+  comprobar('el título y la ubicación no van pegados',
+    /class='titulo'/.test(lista) && /class='donde'/.test(lista) &&
+    /\.tarea \.titulo\{display:block/.test(fs.readFileSync(ruta.join(RAIZ, 'index.html'), 'utf8')));
+  /* la tipografía no tiene mayúsculas acentuadas: no pueden llegar a pantalla */
+  const acentosLista = (lista.match(/[À-Ý]/g) || []);
+  comprobar('la lista no muestra mayúsculas acentuadas', acentosLista.length === 0,
+    acentosLista.length ? acentosLista.join(' ') : 'limpio');
+  comprobar('pero conserva los acentos en minúscula', /á|é|í|ó|ú|ñ/.test(lista),
+    (lista.match(/[a-zá-úñ]*[áéíóúñ][a-zá-úñ]*/) || ['?'])[0]);
   tecla('Tab');
   comprobar('TAB vuelve a cerrarla', !el('pTareas').classList._v);
 

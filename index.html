@@ -216,7 +216,7 @@
   .tarea{
     display:flex; align-items:flex-start; gap:calc(var(--u)*3);
     background:#070b14; border-left:calc(var(--u)*1.5) solid var(--linea);
-    padding:calc(var(--u)*3); margin-bottom:calc(var(--u)*2);
+    padding:calc(var(--u)*3) calc(var(--u)*4); margin-bottom:calc(var(--u)*2);
   }
   .tarea.hecha{border-left-color:var(--verde); opacity:.72}
   .tarea.bloqueada{border-left-color:#3a4152; opacity:.55}
@@ -224,9 +224,14 @@
   .tarea.hecha .marca{color:var(--verde)}
   .tarea.bloqueada .marca{color:#5a6b8c}
   .tarea .cuerpo{flex:1 1 auto; min-width:0}
-  .tarea .titulo{font-size:var(--texto); color:var(--tinta)}
+  /* bloque, no inline: como span, el título y el "dónde" se pegan en una sola
+     línea y el margen de arriba no hace nada */
+  .tarea .titulo{display:block; font-size:var(--texto); color:var(--tinta); line-height:1.5}
   .tarea.hecha .titulo{text-decoration:line-through}
-  .tarea .donde{font-size:calc(var(--texto)*.85); color:#7c8fb0; margin-top:calc(var(--u)*1)}
+  .tarea .donde{
+    display:block; font-size:calc(var(--texto)*.8); color:#7c8fb0;
+    margin-top:calc(var(--u)*1.5); line-height:1.5;
+  }
   .tarea .premio{
     flex:0 0 auto; font-size:calc(var(--texto)*.85); color:var(--verde);
     font-family:var(--mono);
