@@ -49,6 +49,18 @@ const CUERPO_WORKER = [
   "    correr = pyodide.globals.get('correr');",
   "    revisar = pyodide.globals.get('revisar');",
   "    self.postMessage({ listo: true });",
+  "    /* pandas pesa 35 MB mas: se baja DESPUES de avisar que el interprete",
+  "       basico esta listo, para que se pueda empezar a jugar de inmediato. */",
+  "    try {",
+  "      self.postMessage({ progreso: 'descargando pandas en segundo plano' });",
+  "      await pyodide.loadPackage(['pandas']);",
+  "      pyodide.runPython(await (await fetch(urlPiloto)).text());",
+  "      correr = pyodide.globals.get('correr');",
+  "      revisar = pyodide.globals.get('revisar');",
+  "      self.postMessage({ pandasListo: true });",
+  "    } catch (e2) {",
+  "      self.postMessage({ pandasFallo: String(e2 && e2.message ? e2.message : e2) });",
+  "    }",
   "  } catch (err) {",
   "    self.postMessage({ fallo: String(err && err.message ? err.message : err) });",
   "  }",
@@ -61,7 +73,7 @@ const CUERPO_WORKER = [
   "    if (d.tipo === 'sintaxis') {",
   "      self.postMessage({ id: d.id, json: revisar(d.codigo) });",
   "    } else {",
-  "      self.postMessage({ id: d.id, json: correr(d.codigo, d.funcion, d.casos) });",
+  "      self.postMessage({ id: d.id, json: correr(d.codigo, d.funcion, d.casos, !!d.comoDataFrame) });",
   "    }",
   "  } catch (err) {",
   "    self.postMessage({ id: d.id, error: String(err && err.message ? err.message : err) });",
@@ -71,16 +83,20 @@ const CUERPO_WORKER = [
 
 /* ------------------------------ estado ------------------------------------ */
 let worker = null, listo = false, arrancando = false, fallo = null;
+let pandasListo = false, pandasFallo = null;
 let siguienteId = 1;
 const pendientes = {};
 const oyentes = [];
 
 codigo.alCambiarEstado = function (f) { oyentes.push(f); };
 function avisar(texto, tipo) {
-  oyentes.forEach(function (f) { try { f({ listo: listo, texto: texto, tipo: tipo }); } catch (e) {} });
+  oyentes.forEach(function (f) {
+    try { f({ listo: listo, pandas: pandasListo, texto: texto, tipo: tipo }); } catch (e) {}
+  });
 }
 codigo.estado = function () {
-  return { listo: listo, arrancando: arrancando, fallo: fallo };
+  return { listo: listo, arrancando: arrancando, fallo: fallo,
+           pandas: pandasListo, pandasFallo: pandasFallo };
 };
 
 /* --------------------------- arranque del intérprete ---------------------- */
@@ -133,6 +149,16 @@ function alMensaje(e) {
     avisar("Python listo", "listo");
     return;
   }
+  if (d.pandasListo) {
+    pandasListo = true; pandasFallo = null;
+    avisar("Python y pandas listos", "listo");
+    return;
+  }
+  if (d.pandasFallo) {
+    pandasFallo = d.pandasFallo;
+    avisar("Python listo, pero pandas no se pudo cargar: " + d.pandasFallo, "aviso");
+    return;
+  }
   if (d.fallo) {
     listo = false; arrancando = false;
     fallo = "No se pudo cargar Python: " + d.fallo +
@@ -157,7 +183,7 @@ function alMensaje(e) {
    no responde, se lo mata y se levanta uno nuevo. */
 function reiniciar() {
   if (worker) { try { worker.terminate(); } catch (e) {} }
-  worker = null; listo = false; arrancando = false;
+  worker = null; listo = false; arrancando = false; pandasListo = false;
   Object.keys(pendientes).forEach(function (id) { delete pendientes[id]; });
   codigo.preparar();
 }
@@ -185,9 +211,9 @@ function pedir(mensaje, limite) {
   });
 }
 
-codigo.ejecutar = function (fuente, funcion, casos) {
+codigo.ejecutar = function (fuente, funcion, casos, comoDataFrame) {
   return pedir({ tipo: "correr", codigo: String(fuente || ""), funcion: funcion,
-                 casos: JSON.stringify(casos || []) });
+                 casos: JSON.stringify(casos || []), comoDataFrame: !!comoDataFrame });
 };
 
 codigo.revisarSintaxis = function (fuente) {

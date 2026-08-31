@@ -630,15 +630,27 @@ function pintarCasos(resultados) {
 /* El intérprete de Python tarda unos segundos en bajar la primera vez.
    Se avisa en pantalla y se desactiva EJECUTAR hasta que esté listo, para que
    nadie crea que su código está mal cuando lo que falta es el intérprete. */
-let interpreteListo = false;
+let interpreteListo = false, pandasListo = false;
 function pintarInterprete(info) {
   const e = $("interprete");
   if (!e) return;
   interpreteListo = info.listo;
-  if (info.tipo === "listo") { e.className = "listo"; e.textContent = "✓ Python listo"; }
-  else if (info.tipo === "fallo") { e.className = "fallo"; e.textContent = "✗ " + info.texto; }
-  else { e.className = ""; e.textContent = "⌛ " + info.texto + "…"; }
-  if (esCodigo) $("btnEnviar").disabled = !info.listo || ejecutando;
+  pandasListo = !!info.pandas;
+  /* Un reto que necesita pandas no se puede ejecutar hasta que termine de
+     bajar. Se dice con todas las letras, para que nadie crea que su código
+     está mal cuando lo que falta es la librería. */
+  const necesitaPandas = !!(retoActual && retoActual.comoDataFrame);
+  if (info.tipo === "fallo") { e.className = "fallo"; e.textContent = "✗ " + info.texto; }
+  else if (necesitaPandas && !pandasListo) {
+    e.className = "";
+    e.textContent = "⌛ este encargo necesita pandas, todavía se está descargando…";
+  } else if (info.tipo === "listo" || info.listo) {
+    e.className = "listo";
+    e.textContent = pandasListo ? "✓ Python y pandas listos" : "✓ Python listo";
+  } else { e.className = ""; e.textContent = "⌛ " + info.texto + "…"; }
+
+  const puede = info.listo && (!necesitaPandas || pandasListo);
+  if (esCodigo) $("btnEnviar").disabled = !puede || ejecutando;
 }
 
 function abrirReto(reto, id, guardian) {
@@ -667,7 +679,7 @@ function abrirReto(reto, id, guardian) {
     pintarCasos(null);
     const est = EJEC.estado();
     pintarInterprete({
-      listo: est.listo,
+      listo: est.listo, pandas: est.pandas,
       tipo: est.fallo ? "fallo" : (est.listo ? "listo" : "cargando"),
       texto: est.fallo || (est.listo ? "Python listo" : "arrancando el intérprete de Python")
     });
@@ -736,6 +748,11 @@ function enviar() {
     est.textContent = "El intérprete de Python todavía no está listo.";
     return;
   }
+  if (retoActual.comoDataFrame && !pandasListo) {
+    est.className = "mal";
+    est.textContent = "Este encargo usa pandas y todavía se está descargando. Un momento.";
+    return;
+  }
   const fuente = editor.leer();
   estado.borradores[retoId] = fuente;
   guardar();
@@ -743,7 +760,8 @@ function enviar() {
   $("btnEnviar").disabled = true;
   est.className = "tenue"; est.textContent = "Ejecutando…";
 
-  EJEC.ejecutar(fuente, retoActual.funcion, casosTodos(retoActual)).then(function (r) {
+  EJEC.ejecutar(fuente, retoActual.funcion, casosTodos(retoActual),
+                retoActual.comoDataFrame).then(function (r) {
     ejecutando = false;
     $("btnEnviar").disabled = false;
     const consola = $("consola");

@@ -35,15 +35,58 @@ def _vigilante(limite):
     return trazar
 
 
+# pandas es opcional: si no esta cargado, todo lo demas sigue funcionando.
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
+
 def _normalizar(v):
-    """Tuplas y listas se comparan igual: el equipo puede devolver cualquiera."""
+    """Lleva cualquier resultado a listas, diccionarios y numeros simples.
+
+    Asi el equipo puede devolver lo que le resulte natural y todo se compara
+    igual: una tupla vale como lista, un DataFrame vale como lista de
+    registros, y un entero de numpy vale como entero de Python.
+    """
+    if pd is not None:
+        if isinstance(v, pd.DataFrame):
+            # columnas en orden alfabetico: que el orden en que las creo el
+            # equipo no cambie el resultado. Las filas SI mantienen su orden.
+            return [{str(c): _normalizar(fila[c]) for c in sorted(v.columns)}
+                    for _, fila in v.iterrows()]
+        if isinstance(v, pd.Series):
+            # con indice por defecto es una lista; con indice propio, un dict
+            if v.index.equals(pd.RangeIndex(len(v))):
+                return [_normalizar(x) for x in v.tolist()]
+            return {str(k): _normalizar(x) for k, x in v.items()}
+        if isinstance(v, pd.Index):
+            return [_normalizar(x) for x in v.tolist()]
+        if v is getattr(pd, "NA", object()) or (pd.isna(v) if _escalar(v) else False):
+            return None
+
+    if hasattr(v, "item") and hasattr(v, "dtype"):      # numeros de numpy
+        try:
+            return _normalizar(v.item())
+        except (ValueError, AttributeError):
+            pass
+    if hasattr(v, "tolist") and hasattr(v, "dtype"):    # arreglos de numpy
+        try:
+            return _normalizar(v.tolist())
+        except (ValueError, AttributeError):
+            pass
     if isinstance(v, tuple):
         return [_normalizar(x) for x in v]
     if isinstance(v, list):
         return [_normalizar(x) for x in v]
     if isinstance(v, dict):
-        return {k: _normalizar(x) for k, x in v.items()}
+        return {str(k): _normalizar(x) for k, x in v.items()}
     return v
+
+
+def _escalar(v):
+    """True si es un valor suelto, no una coleccion. pd.isna revienta con listas."""
+    return not isinstance(v, (list, tuple, dict, set)) and not hasattr(v, "__len__")
 
 
 def igual(a, b):
@@ -86,8 +129,12 @@ def revisar(codigo):
         return json.dumps({"ok": False, "mensaje": str(e)})
 
 
-def correr(codigo, funcion, casos_json):
-    """Ejecuta el código del equipo contra los casos y devuelve un informe JSON."""
+def correr(codigo, funcion, casos_json, como_dataframe=False):
+    """Ejecuta el código del equipo contra los casos y devuelve un informe JSON.
+
+    como_dataframe: si es cierto, los argumentos que sean lista de
+    diccionarios llegan a la función ya convertidos en DataFrame.
+    """
     casos = json.loads(casos_json)
     registros = []
 
@@ -135,6 +182,16 @@ def correr(codigo, funcion, casos_json):
         }, ensure_ascii=False)
 
     # 4) correr cada caso, cada uno con su propio reloj
+    # Un reto puede pedir que sus argumentos lleguen ya como DataFrame en vez
+    # de como lista de diccionarios. Lo decide el reto con comoDataFrame: true.
+    aDataFrame = bool(como_dataframe)
+    if aDataFrame and pd is None:
+        return json.dumps({
+            "error": "Este reto necesita pandas y el interprete todavia no lo cargo. "
+                     "Espera unos segundos y vuelve a ejecutar.",
+            "registros": registros
+        }, ensure_ascii=False)
+
     resultados = []
     for n, caso in enumerate(casos):
         fila = {
@@ -143,12 +200,15 @@ def correr(codigo, funcion, casos_json):
             "entrada": ver(caso.get("entrada", [])),
             "esperado": ver(caso.get("salida")),
         }
+        args = caso.get("entrada", [])
+        if aDataFrame:
+            args = [_quizaDataFrame(a) for a in args]
         captura = io.StringIO()
         limite = time.monotonic() + LIMITE_SEG
         try:
             sys.settrace(_vigilante(limite))
             with contextlib.redirect_stdout(captura):
-                obtuvo = fn(*caso.get("entrada", []))
+                obtuvo = fn(*args)
             sys.settrace(None)
             fila["obtenido"] = ver(obtuvo)
             fila["paso"] = igual(obtuvo, caso.get("salida"))
@@ -176,6 +236,16 @@ def correr(codigo, funcion, casos_json):
         "resultados": resultados,
         "registros": registros[:MAX_LINEAS_LOG]
     }, ensure_ascii=False)
+
+
+def _quizaDataFrame(v):
+    """Convierte una lista de diccionarios en DataFrame; el resto lo deja igual.
+    Asi un mismo reto puede recibir la tabla y ademas un parametro suelto."""
+    if pd is None:
+        return v
+    if isinstance(v, list) and v and all(isinstance(x, dict) for x in v):
+        return pd.DataFrame(v)
+    return v
 
 
 def _cortar(captura):

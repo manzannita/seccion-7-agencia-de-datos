@@ -135,6 +135,9 @@ la pista cuesta 25 puntos y solo se cobra una vez.
 
 ## La terminal de Python
 
+Cómo escribir retos nuevos, con la calibración de dificultad y las trampas
+que ya nos mordieron: **`herramientas/prompt-retos.md`**.
+
 Cada encargo abre un editor con numeración de líneas, `Tab` de 4 espacios,
 sangría automática después de los dos puntos, **revisión de sintaxis mientras
 se escribe** (con número de línea) y ejecución contra los casos de prueba.
@@ -145,6 +148,35 @@ El intérprete es **Pyodide**: CPython compilado a WebAssembly, corriendo dentro
 del navegador. Se puede usar toda la librería estándar (`math`, `collections`,
 `itertools`, `re`...). No hay que instalar Python en las computadoras de los
 equipos: el que hace falta es solo para el lanzador.
+
+### pandas
+
+El intérprete trae **pandas** además de la librería estándar. Se carga en dos
+tiempos: primero el intérprete básico (13 MB) para que se pueda empezar a
+jugar de inmediato, y pandas (35 MB más) sigue bajando en segundo plano. La
+pantalla del encargo avisa en qué va, y si un encargo necesita pandas no deja
+ejecutar hasta que esté listo, con el motivo escrito.
+
+Un reto puede pedir que su tabla llegue ya como DataFrame:
+
+```js
+funcion: "resumen",
+comoDataFrame: true,   // los argumentos que sean lista de diccionarios
+                       // llegan convertidos en DataFrame
+```
+
+Sin esa bandera llegan como lista de diccionarios y el equipo decide si usa
+pandas o un bucle. **El corrector acepta las dos formas**: un DataFrame se
+compara igual que la lista de diccionarios equivalente, una Series igual que
+una lista o un diccionario, y los números de numpy igual que los de Python.
+Así un mismo reto se puede resolver con `groupby` o con un `for`, y las dos
+respuestas valen.
+
+Si vas a dar la competencia sin internet, acuérdate de que ahora son 49 MB:
+
+```
+python herramientas/descargar_python.py
+```
 
 ### Cómo se evita que un bucle infinito arruine la partida
 

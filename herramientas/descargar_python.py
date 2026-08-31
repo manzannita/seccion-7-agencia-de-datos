@@ -19,14 +19,21 @@ import urllib.request
 VERSION = "v0.26.4"        # debe coincidir con PYODIDE_CDN en js/codigo.js
 BASE = "https://cdn.jsdelivr.net/pyodide/%s/full/" % VERSION
 
-# Lo mínimo para arrancar el intérprete. Los paquetes extra (numpy, pandas...)
-# no se bajan: los retos usan solo la librería estándar.
+# El intérprete y, además, pandas con sus dependencias: los retos lo usan.
+# Sin estos últimos el juego funciona igual, pero los retos que piden un
+# DataFrame no se pueden ejecutar.
 ARCHIVOS = [
     "pyodide.js",
     "pyodide.asm.js",
     "pyodide.asm.wasm",
     "python_stdlib.zip",
     "pyodide-lock.json",
+    # pandas y lo que necesita para arrancar
+    "pandas-2.2.0-cp312-cp312-pyodide_2024_0_wasm32.whl",
+    "numpy-1.26.4-cp312-cp312-pyodide_2024_0_wasm32.whl",
+    "python_dateutil-2.9.0.post0-py2.py3-none-any.whl",
+    "pytz-2024.1-py2.py3-none-any.whl",
+    "six-1.16.0-py2.py3-none-any.whl",
 ]
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

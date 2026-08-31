@@ -24,4 +24,5 @@ if trabajo.get("tipo") == "sintaxis":
     sys.stdout.write(piloto.revisar(trabajo["codigo"]))
 else:
     sys.stdout.write(piloto.correr(
-        trabajo["codigo"], trabajo["funcion"], json.dumps(trabajo["casos"])))
+        trabajo["codigo"], trabajo["funcion"], json.dumps(trabajo["casos"]),
+        trabajo.get("comoDataFrame", False)))

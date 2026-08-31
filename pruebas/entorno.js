@@ -97,13 +97,14 @@ function arrancar() {
        arrancar: si no, el juego cree que no hay intérprete y bloquea EJECUTAR. */
     if (f === 'js/codigo.js') {
       const C = global.window.CQ.codigo;
-      C.ejecutar = (fuente, funcion, casos) =>
-        Promise.resolve(pedirAPython({ tipo: 'correr', codigo: String(fuente || ''), funcion, casos: casos || [] }));
+      C.ejecutar = (fuente, funcion, casos, comoDataFrame) =>
+        Promise.resolve(pedirAPython({ tipo: 'correr', codigo: String(fuente || ''), funcion,
+                                       casos: casos || [], comoDataFrame: !!comoDataFrame }));
       C.revisarSintaxis = (fuente) => String(fuente || '').trim()
         ? Promise.resolve(pedirAPython({ tipo: 'sintaxis', codigo: String(fuente) }))
         : Promise.resolve({ ok: false, mensaje: '' });
       C.preparar = () => {};
-      C.estado = () => ({ listo: true, arrancando: false, fallo: null });
+      C.estado = () => ({ listo: true, arrancando: false, fallo: null, pandas: true });
     }
   });
 

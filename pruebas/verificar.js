@@ -218,6 +218,64 @@ async function principal() {
   comprobar('el chequeo de sintaxis en vivo detecta errores', !sx.ok && !!sx.mensaje, sx.mensaje);
   comprobar('el chequeo de sintaxis acepta código válido',
     (await EJ.revisarSintaxis('x = 1')).ok);
+  /* ------------------------------------- 2b. pandas --------------------- */
+  titulo('PANDAS');
+
+  /* El codigo Python se arma juntando lineas, sin escapes de salto: es
+     demasiado facil que un editor los coma y el error aparece lejos. */
+  const NL = String.fromCharCode(10);
+  const py = (...lineas) => lineas.join(NL) + NL;
+
+  const TABLA = [
+    { area: 'redes', id: 1, ok: true },
+    { area: 'datos', id: 2, ok: false },
+    { area: 'redes', id: 3, ok: true }
+  ];
+  const ESPERADO = [{ area: 'datos', total: 1 }, { area: 'redes', total: 2 }];
+
+  /* con comoDataFrame los argumentos llegan ya convertidos */
+  r = await EJ.ejecutar(py(
+    'def resumen(tabla):',
+    '    r = tabla.groupby("area", as_index=False)["id"].count()',
+    '    return r.rename(columns={"id": "total"}).sort_values("area")'),
+    'resumen', [{ entrada: [TABLA], salida: ESPERADO }], true);
+  comprobar('un reto recibe la tabla ya como DataFrame',
+    r.resultados && r.resultados[0].paso, r.error || (r.resultados && r.resultados[0].obtenido));
+
+  /* y el mismo reto se puede resolver sin pandas: solo importa lo devuelto */
+  r = await EJ.ejecutar(py(
+    'def resumen(tabla):',
+    '    conteo = {}',
+    '    for fila in tabla.to_dict("records"):',
+    '        conteo[fila["area"]] = conteo.get(fila["area"], 0) + 1',
+    '    return [{"area": a, "total": conteo[a]} for a in sorted(conteo)]'),
+    'resumen', [{ entrada: [TABLA], salida: ESPERADO }], true);
+  comprobar('el mismo reto vale resuelto con un bucle',
+    r.resultados && r.resultados[0].paso, r.error || (r.resultados && r.resultados[0].obtenido));
+
+  /* una Series se compara contra un diccionario */
+  r = await EJ.ejecutar(py(
+    'def por_area(tabla):',
+    '    return tabla.groupby("area")["id"].count()'),
+    'por_area', [{ entrada: [TABLA], salida: { datos: 1, redes: 2 } }], true);
+  comprobar('una Series se compara contra un diccionario',
+    r.resultados && r.resultados[0].paso, r.error || (r.resultados && r.resultados[0].obtenido));
+
+  /* los numeros de numpy valen como numeros de Python */
+  r = await EJ.ejecutar(py(
+    'def cuantos(tabla):',
+    '    return tabla["id"].sum()'),
+    'cuantos', [{ entrada: [TABLA], salida: 6 }], true);
+  comprobar('un entero de numpy vale como entero',
+    r.resultados && r.resultados[0].paso, r.error || (r.resultados && r.resultados[0].obtenido));
+
+  /* sin la bandera, la funcion recibe la lista de diccionarios tal cual */
+  r = await EJ.ejecutar(py(
+    'def cuantos(registros):',
+    '    return len(registros)'),
+    'cuantos', [{ entrada: [TABLA], salida: 3 }]);
+  comprobar('sin la bandera llega una lista de diccionarios',
+    r.resultados && r.resultados[0].paso, r.error);
 
   /* ------------------------------- 3. los retos son resolubles ---------- */
   titulo('RETOS');
