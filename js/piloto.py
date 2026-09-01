@@ -197,10 +197,10 @@ def correr(codigo, funcion, casos_json, como_dataframe=False):
         fila = {
             "n": n,
             "oculto": bool(caso.get("oculto")),
-            "entrada": ver(caso.get("entrada", [])),
+            "entrada": _resumirEntrada(caso.get("entrada", [])),
             "esperado": ver(caso.get("salida")),
         }
-        args = caso.get("entrada", [])
+        args = [_expandirTabla(a) for a in caso.get("entrada", [])]
         if aDataFrame:
             args = [_quizaDataFrame(a) for a in args]
         captura = io.StringIO()
@@ -236,6 +236,41 @@ def correr(codigo, funcion, casos_json, como_dataframe=False):
         "resultados": resultados,
         "registros": registros[:MAX_LINEAS_LOG]
     }, ensure_ascii=False)
+
+
+def _expandirTabla(v):
+    """Acepta tablas escritas en forma compacta y las vuelve registros.
+
+    Escribir treinta filas como lista de diccionarios en retos.js es
+    ilegible: cada nombre de columna se repite treinta veces. Con esta forma
+    las columnas se declaran una vez y las filas se leen como una tabla:
+
+        { columnas: ["area", "errores"], filas: [["redes", 3], ["datos", 0]] }
+    """
+    if isinstance(v, dict) and "columnas" in v and "filas" in v:
+        cols = list(v["columnas"])
+        return [dict(zip(cols, fila)) for fila in v["filas"]]
+    return v
+
+
+def _resumirEntrada(args):
+    """Cómo se le muestra la entrada al equipo.
+
+    Una tabla de treinta filas no cabe en la pantalla del reto y tampoco
+    aporta: lo que importa es su forma. Las tablas se resumen, el resto se
+    muestra tal cual.
+    """
+    partes = []
+    for a in args:
+        registros = _expandirTabla(a)
+        esTabla = (isinstance(registros, list) and len(registros) > 4
+                   and all(isinstance(x, dict) for x in registros))
+        if esTabla:
+            cols = sorted({c for fila in registros for c in fila})
+            partes.append("<tabla de %d filas: %s>" % (len(registros), ", ".join(cols)))
+        else:
+            partes.append(ver(registros))
+    return "[" + ", ".join(partes) + "]"
 
 
 def _quizaDataFrame(v):

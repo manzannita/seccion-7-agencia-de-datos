@@ -277,6 +277,25 @@ async function principal() {
   comprobar('sin la bandera llega una lista de diccionarios',
     r.resultados && r.resultados[0].paso, r.error);
 
+  /* la forma compacta de tabla: columnas una vez, filas como filas */
+  const TABLA_COMPACTA = {
+    columnas: ['area', 'maquina', 'errores'],
+    filas: [['redes', 'M1', 3], ['datos', 'M2', 0], ['redes', 'M3', 5],
+            ['boveda', 'M4', 7], ['datos', 'M5', 2], ['boveda', 'M6', 1]]
+  };
+  r = await EJ.ejecutar(py(
+    'def peores(tabla):',
+    '    con_fallas = tabla[tabla["errores"] > 0]',
+    '    t = con_fallas.groupby("area", as_index=False)["errores"].sum()',
+    '    return t.sort_values("errores", ascending=False).head(2)'),
+    'peores', [{ entrada: [TABLA_COMPACTA],
+                 salida: [{ area: 'boveda', errores: 8 }, { area: 'redes', errores: 8 }] }], true);
+  comprobar('una tabla en forma compacta llega como DataFrame',
+    r.resultados && r.resultados[0].paso, r.error || (r.resultados && r.resultados[0].obtenido));
+  comprobar('  y en pantalla se muestra resumida, no fila por fila',
+    /<tabla de 6 filas/.test((r.resultados && r.resultados[0].entrada) || ''),
+    (r.resultados && r.resultados[0].entrada) || '');
+
   /* ------------------------------- 3. los retos son resolubles ---------- */
   titulo('RETOS');
   const retos = JUEGO.npcs.filter(n => n.reto).map(n => ({ n: n.nombre, r: n.reto }))

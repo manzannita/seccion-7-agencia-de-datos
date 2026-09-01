@@ -165,12 +165,23 @@ comoDataFrame: true,   // los argumentos que sean lista de diccionarios
                        // llegan convertidos en DataFrame
 ```
 
-Sin esa bandera llegan como lista de diccionarios y el equipo decide si usa
-pandas o un bucle. **El corrector acepta las dos formas**: un DataFrame se
-compara igual que la lista de diccionarios equivalente, una Series igual que
-una lista o un diccionario, y los números de numpy igual que los de Python.
-Así un mismo reto se puede resolver con `groupby` o con un `for`, y las dos
-respuestas valen.
+**El corrector es tolerante con la forma de la respuesta**: un DataFrame se
+compara igual que la lista de diccionarios equivalente (el orden de las
+columnas no importa, el de las filas sí), una Series igual que una lista o un
+diccionario según su índice, y los números de numpy igual que los de Python.
+Por eso `groupby(...).sum()` se puede devolver tal cual, sin `reset_index()`.
+
+Las tablas de los casos se escriben en forma compacta, para que quepan sin
+volverse ilegibles:
+
+```js
+{ columnas: ["area", "maquina", "errores"],
+  filas: [["redes", "M1", 3],
+          ["datos", "M2", 0]] }
+```
+
+En la pantalla del reto se muestran resumidas
+(`<tabla de 12 filas: area, errores, maquina>`).
 
 Si vas a dar la competencia sin internet, acuérdate de que ahora son 49 MB:
 

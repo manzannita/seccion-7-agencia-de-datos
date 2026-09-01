@@ -589,8 +589,33 @@ function verPython(v) {
   }
   return String(v);
 }
+/* Una tabla escrita en forma compacta: las columnas una vez, las filas como
+   filas. Se expande igual que en el corrector. */
+function expandirTabla(v) {
+  if (v && typeof v === "object" && !Array.isArray(v) && v.columnas && v.filas) {
+    return v.filas.map(function (fila) {
+      const o = {};
+      v.columnas.forEach(function (c, i) { o[c] = fila[i]; });
+      return o;
+    });
+  }
+  return v;
+}
+/* Una tabla de treinta filas no cabe en la pantalla del reto y tampoco aporta:
+   lo que el equipo necesita saber es su forma, no cada dato. */
+function verEntrada(v) {
+  const t = expandirTabla(v);
+  const esTabla = Array.isArray(t) && t.length > 4 &&
+                  t.every(function (x) { return x && typeof x === "object" && !Array.isArray(x); });
+  if (!esTabla) return verPython(t);
+  const cols = [];
+  t.forEach(function (fila) {
+    Object.keys(fila).forEach(function (c) { if (cols.indexOf(c) < 0) cols.push(c); });
+  });
+  return "<tabla de " + t.length + " filas: " + cols.join(", ") + ">";
+}
 function argsPython(entrada) {
-  return (entrada || []).map(verPython).join(", ");
+  return (entrada || []).map(verEntrada).join(", ");
 }
 
 function casosVisibles(r) { return r.casos || []; }
