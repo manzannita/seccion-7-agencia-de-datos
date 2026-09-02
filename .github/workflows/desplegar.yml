@@ -1,0 +1,78 @@
+# Publica el juego en GitHub Pages en cada push a main.
+#
+# OJO: Pages publica lo que se le entregue, y el repositorio contiene las
+# soluciones de los seis retos en pruebas/verificar.js. Por eso NO se publica
+# el repositorio entero: este flujo arma una carpeta solo con lo jugable.
+#
+# Qué queda fuera y por qué:
+#   pruebas/    las soluciones de referencia
+#   vendor/     el intérprete de 49 MB (en el sitio se usa el CDN)
+#   herramientas/  utilidades de organización, no hacen falta para jugar
+#   sprites/fuente/ y sprites/pen/  material de trabajo del arte
+name: Desplegar el juego
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Armar el sitio solo con lo jugable
+        run: |
+          mkdir -p _sitio/js _sitio/sprites
+          cp index.html _sitio/
+          cp js/*.js js/piloto.py _sitio/js/
+          cp sprites/*.png _sitio/sprites/
+          cp sprites/LEEME.md _sitio/sprites/ 2>/dev/null || true
+
+          # que no lo encuentren buscando en Google durante la competencia
+          printf 'User-agent: *\nDisallow: /\n' > _sitio/robots.txt
+
+      - name: Comprobar que no se cuela ninguna solución
+        run: |
+          # Ninguna carpeta de trabajo debe llegar al sitio
+          for prohibida in pruebas vendor herramientas; do
+            if [ -e "_sitio/$prohibida" ]; then
+              echo "ERROR: se coló la carpeta $prohibida"; exit 1
+            fi
+          done
+          # La tabla de soluciones de referencia vive en pruebas/verificar.js.
+          # Se busca por el nombre de la tabla, NO por "def nombre_funcion":
+          # las plantillas que ve el equipo empiezan igual que las soluciones.
+          if grep -rl "SOLUCIONES" _sitio/ ; then
+            echo "ERROR: la tabla de soluciones llegó al sitio"; exit 1
+          fi
+          if find _sitio -name "verificar.js" -o -name "puente.py" | grep . ; then
+            echo "ERROR: se coló un archivo de las pruebas"; exit 1
+          fi
+          echo "Sitio limpio. Archivos:"
+          find _sitio -type f | sort
+          du -sh _sitio
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _sitio
+
+  desplegar:
+    needs: construir
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4
