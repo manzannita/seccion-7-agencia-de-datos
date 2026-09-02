@@ -1,0 +1,55 @@
+{
+ "_leeme": [
+  "La ruta física que hacen los equipos antes de sentarse a jugar.",
+  "ESTE ARCHIVO TIENE LAS RESPUESTAS EN CLARO Y NO SE PUBLICA:",
+  "vive en herramientas/, que el despliegue nunca sube.",
+  "",
+  "Después de editarlo, regenera todo con:",
+  "    python herramientas/generar_pistas.py",
+  "",
+  "CÓMO FUNCIONA",
+  "Cada estación es un sitio físico con un cartel pegado. El cartel lleva",
+  "un QR distinto y nada más: ni el reto ni el nombre del sitio. Al",
+  "escanearlo, la página reconoce ese cartel y muestra el reto en el",
+  "celular. Al acertar entrega un fragmento de la clave y dice dónde está",
+  "la siguiente estación.",
+  "",
+  "Los equipos arrancan con un código que les das tú (uno por equipo).",
+  "Ese código dice quiénes son y dónde empiezan.",
+  "",
+  "fragmento: el trozo de la clave final que entrega esa estación.",
+  "Juntando los fragmentos en el orden de esta lista sale la clave que abre",
+  "el juego. Si falta uno, no pueden entrar."
+ ],
+ "titulo": "ACCESO A LA SECCIÓN 7",
+ "subtitulo": "Ruta de reconocimiento",
+ "cierre": "Ya pueden volver al laboratorio. Escriban esta clave en el juego para entrar.",
+ "estaciones": [
+  {
+   "id": "A",
+   "lugar": "TAWS",
+   "acertijo": "Reordena estas letras para formar una palabra:\n\nS  O  T  A  D",
+   "respuesta": "DATOS",
+   "fragmento": "NUC"
+  },
+  {
+   "id": "B",
+   "lugar": "Labs de FIEC (edificio externo)",
+   "acertijo": "Cada número es la posición de una letra en el abecedario.\nDescífralo:\n\n3 - 15 - 4 - 9 - 7 - 15",
+   "respuesta": "CODIGO",
+   "fragmento": "LEO"
+  },
+  {
+   "id": "C",
+   "lugar": "Entrada a Coding Bootcamps ESPOL, FIEC nueva",
+   "acertijo": "Estas tres líneas de Python están desordenadas.\nPonlas en el orden correcto y escribe lo que imprime:\n\n    print(total)\n    total = cajas * 7\n    cajas = 6",
+   "respuesta": "42",
+   "fragmento": "7X9"
+  }
+ ],
+ "equipos": [
+  "PyHunters",
+  "Los migajeros de FP 😋",
+  "Team Random"
+ ]
+}

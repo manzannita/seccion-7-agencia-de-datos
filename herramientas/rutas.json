@@ -1,0 +1,29 @@
+{
+ "rutas": {
+  "PyHunters": [
+   "A",
+   "B",
+   "C"
+  ],
+  "Los migajeros de FP 😋": [
+   "B",
+   "C",
+   "A"
+  ],
+  "Team Random": [
+   "C",
+   "A",
+   "B"
+  ]
+ },
+ "fichas": {
+  "A": "4d4tmataiurt",
+  "B": "czajyvevsxuw",
+  "C": "akx3h5abuutq"
+ },
+ "arranques": {
+  "PyHunters": "VEGA-8698",
+  "Los migajeros de FP 😋": "ORION-7778",
+  "Team Random": "SIGMA-7858"
+ }
+}

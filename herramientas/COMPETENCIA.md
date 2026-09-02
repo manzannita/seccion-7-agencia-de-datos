@@ -192,6 +192,103 @@ Borra la tabla y listo; el juego lo detecta y esconde la sección:
 drop table if exists sabotajes cascade;
 ```
 
+## La cacería de códigos QR (antes de jugar)
+
+El juego no se abre solo: pide una **clave de acceso** que los equipos arman
+recorriendo el campus. Sin pasar por las tres estaciones no hay clave, y sin
+clave no entran.
+
+### Cómo funciona
+
+Hay tres estaciones, cada una con un cartel pegado. El cartel lleva **un QR
+distinto y nada más**: ni el reto ni el nombre del sitio. Al escanearlo, la
+página reconoce ese cartel y **muestra el reto en el celular**. Si aciertan,
+reciben un **fragmento** de la clave y **dónde está su siguiente estación**.
+
+| estación | lugar | reto | respuesta | da |
+|---|---|---|---|---|
+| A | TAWS | anagrama | `DATOS` | `NUC` |
+| B | Labs de FIEC (externo) | letras por su número | `CODIGO` | `LEO` |
+| C | Entrada a Coding Bootcamps ESPOL, FIEC nueva | ordenar código Python | `42` | `7X9` |
+
+`NUC` + `LEO` + `7X9` = **NUCLEO7X9**, la clave que abre el juego.
+
+Cada equipo recorre las tres en distinto orden para que no se amontonen ni se
+copien. La clave no viaja dentro de ningún QR: la arma la página al juntar los
+tres fragmentos. Saltarse una estación no es un atajo, es quedarse fuera.
+
+### El código de arranque
+
+Cada equipo empieza con un código que **le das tú**. Ese código dice quiénes
+son y dónde empieza su ruta, así que la página no tiene que preguntarles nada
+más. Está en `pistas/codigos-arranque.html` y en `herramientas/rutas.txt`:
+
+```
+Equipo 1   VEGA-3364    empieza en TAWS
+Equipo 2   ORION-7346   empieza en Labs de FIEC (edificio externo)
+...
+```
+
+Da igual cómo lo escriban: `VEGA-3364`, `vega 3364` o `vega3364` valen todos.
+
+Con seis equipos y tres estaciones, los equipos 1 y 4 arrancan en el mismo
+sitio, el 2 y el 5 en otro, y el 3 y el 6 en el tercero. Si quieres que no
+coincidan ni al arrancar, usa tres equipos, o añade una cuarta estación.
+
+### Preparar
+
+```
+python herramientas/generar_pistas.py
+```
+
+| archivo | para qué |
+|---|---|
+| `js/pistas-datos.js` | lo que lee la página, todo cifrado. Se publica |
+| `pistas/carteles.html` | los tres carteles con su QR. **Imprimir y pegar** |
+| `pistas/codigos-arranque.html` | los códigos, una hoja. **Para ti** |
+| `herramientas/rutas.txt` | recorridos, respuestas y las direcciones de los QR |
+
+Los dos archivos imprimibles llevan datos que los equipos no deben ver. El
+despliegue lo comprueba y se para solo si alguna vez se cuelan.
+
+El generador **reutiliza** los códigos de arranque y los QR que ya existen
+(los guarda en `herramientas/rutas.json`), así que puedes retocar un reto y
+volver a generar sin que los carteles impresos dejen de servir. Te avisa al
+final si algo salió nuevo y hay que reimprimir.
+
+Si quieres códigos nuevos a propósito, borra `herramientas/rutas.json` y
+vuelve a generar.
+
+### Cambiar lugares o retos
+
+Todo sale de `herramientas/pistas.json`. Cambia el `lugar`, el `acertijo`, la
+`respuesta` o el `fragmento` y vuelve a generar. La clave final es la unión de
+los fragmentos en el orden en que estén las estaciones en ese archivo.
+
+El `acertijo` ahora se ve en el celular, así que puede ser largo y llevar
+saltos de línea (`
+`). La `respuesta` es lo que tienen que escribir: se
+ignoran mayúsculas, tildes, espacios y guiones.
+
+El campo `cierre` es lo que ven al completar la ruta, debajo de la clave:
+
+```
+"cierre": "Ya pueden volver al laboratorio. Escriban esta clave en el juego para entrar."
+```
+
+### El día
+
+1. Imprime `carteles.html` y pega cada cartel en su sitio.
+2. Quédate con `codigos-arranque.html`.
+3. A cada equipo le das **solo su código**. Ellos lo escriben en la página y
+   ahí les dice dónde ir.
+4. Van, escanean, resuelven, y la página los manda a la siguiente.
+5. Con las tres, la página les muestra `NUCLEO7X9` y les dice que vuelvan al
+   laboratorio. Con esa clave entran al juego.
+
+Si un equipo se atasca de verdad, en `herramientas/rutas.txt` tienes todas las
+respuestas y las direcciones de los QR para probarlos sin caminar.
+
 ## Qué se guarda de cada intento
 
 Cada vez que un equipo pulsa EJECUTAR, se guarda una fila: equipo, encargo,

@@ -9,6 +9,8 @@
 #   vendor/     el intérprete de 49 MB (en el sitio se usa el CDN)
 #   herramientas/  utilidades de organización (salvo el panel, que sí se publica)
 #   sprites/fuente/ y sprites/pen/  material de trabajo del arte
+#   pistas/carteles.html y pistas/hojas-equipo.html  llevan las respuestas
+#                   de la caceria en claro: se imprimen, no se publican.
 name: Desplegar el juego
 
 on:
@@ -31,6 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Probar la caceria de codigos
+        run: node pruebas/verificar-pistas.js
+
       - name: Armar el sitio solo con lo jugable
         run: |
           mkdir -p _sitio/js _sitio/sprites
@@ -45,6 +50,13 @@ jobs:
           # no se cuele ninguna clave de administrador.
           mkdir -p _sitio/panel
           cp herramientas/panel.html _sitio/panel/index.html
+
+          # La caceria de codigos QR previa al juego. Se publica SOLO la pagina
+          # que usan desde el celular. Los carteles y las hojas de equipo
+          # llevan las respuestas y los lugares en claro: se imprimen, no se
+          # publican. js/pistas-datos.js ya viaja cifrado con js/*.js.
+          mkdir -p _sitio/pistas
+          cp pistas/index.html _sitio/pistas/
 
           # que no lo encuentren buscando en Google durante la competencia
           printf 'User-agent: *\nDisallow: /\n' > _sitio/robots.txt
@@ -81,6 +93,16 @@ jobs:
           if grep -q "service_role" _sitio/panel/index.html; then
             echo "ERROR: el panel menciona service_role"; exit 1
           fi
+          # Los carteles y las hojas llevan respuestas y lugares en claro.
+          for impreso in carteles.html codigos-arranque.html; do
+            if find _sitio -name "$impreso" | grep . ; then
+              echo "ERROR: $impreso es para imprimir, no para publicar"; exit 1
+            fi
+          done
+          # Y por si acaso: ningun lugar ni acertijo de la caceria puede
+          # aparecer en claro en el sitio. Se compara con el original.
+          python3 pruebas/guardia-caceria.py _sitio
+
           echo "Sitio limpio. Archivos:"
           find _sitio -type f | sort
           du -sh _sitio

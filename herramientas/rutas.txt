@@ -1,0 +1,28 @@
+RECORRIDOS  (para ti, no para los equipos)
+clave final: NUCLEO7X9
+
+CODIGO DE ARRANQUE DE CADA EQUIPO
+   PyHunters  VEGA-8698    empieza en TAWS
+   Los migajeros de FP 😋 ORION-7778   empieza en Labs de FIEC (edificio externo)
+   Team Random SIGMA-7858   empieza en Entrada a Coding Bootcamps ESPOL, FIEC nueva
+
+DIRECCION DE CADA CARTEL (para probarlos sin caminar)
+   [A] TAWS                                       https://manzannita.github.io/seccion-7-agencia-de-datos/pistas/?e=4d4tmataiurt
+   [B] Labs de FIEC (edificio externo)            https://manzannita.github.io/seccion-7-agencia-de-datos/pistas/?e=czajyvevsxuw
+   [C] Entrada a Coding Bootcamps ESPOL, FIEC nueva https://manzannita.github.io/seccion-7-agencia-de-datos/pistas/?e=akx3h5abuutq
+
+PyHunters
+   1. [A] TAWS                                           respuesta: DATOS        da: NUC
+   2. [B] Labs de FIEC (edificio externo)                respuesta: CODIGO       da: LEO
+   3. [C] Entrada a Coding Bootcamps ESPOL, FIEC nueva   respuesta: 42           da: 7X9
+
+Los migajeros de FP 😋
+   1. [B] Labs de FIEC (edificio externo)                respuesta: CODIGO       da: LEO
+   2. [C] Entrada a Coding Bootcamps ESPOL, FIEC nueva   respuesta: 42           da: 7X9
+   3. [A] TAWS                                           respuesta: DATOS        da: NUC
+
+Team Random
+   1. [C] Entrada a Coding Bootcamps ESPOL, FIEC nueva   respuesta: 42           da: 7X9
+   2. [A] TAWS                                           respuesta: DATOS        da: NUC
+   3. [B] Labs de FIEC (edificio externo)                respuesta: CODIGO       da: LEO
+

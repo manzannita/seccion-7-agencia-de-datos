@@ -1,0 +1,274 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<title>Ruta de acceso — Sección 7</title>
+<style>
+ :root{--fondo:#0b1020;--panel:#141b2e;--linea:#293754;--tinta:#dbe6f5;
+       --cian:#1fb8d4;--verde:#5fce84;--rojo:#f0788c;--ambar:#f5c14e;--tenue:#8fa3c0}
+ *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+ body{margin:0 auto;background:var(--fondo);color:var(--tinta);
+      font:17px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      padding:22px 18px 44px;max-width:560px}
+ h1{font-size:1.1rem;letter-spacing:.14em;margin:0 0 4px;color:var(--cian)}
+ .sub{color:var(--tenue);font-size:.9rem;margin-bottom:20px}
+ label{display:block;margin:20px 0 6px;color:var(--tenue);font-size:.82rem;
+       letter-spacing:.07em;text-transform:uppercase}
+ input{width:100%;padding:15px;font-size:1.1rem;border-radius:10px;
+       background:#070b14;color:var(--tinta);border:1px solid var(--linea);
+       text-transform:uppercase;letter-spacing:.1em;text-align:center;font-weight:600}
+ input:focus{outline:none;border-color:var(--cian)}
+ button{width:100%;padding:16px;font-size:1.05rem;font-weight:600;margin-top:14px;
+        border-radius:10px;border:none;background:var(--cian);color:#06131a}
+ button:active{transform:scale(.99)}
+ button:disabled{opacity:.5}
+
+ .tarjeta{background:var(--panel);border:1px solid var(--linea);border-radius:12px;
+          padding:18px;margin-bottom:18px}
+ .estacion{font-size:.8rem;letter-spacing:.22em;color:var(--tenue)}
+ .reto{font-size:1.25rem;line-height:1.7;white-space:pre-wrap;margin-top:10px;
+       font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+ .marcador{display:flex;gap:8px;margin:20px 0 4px}
+ .ficha{flex:1;height:52px;border-radius:8px;display:flex;align-items:center;
+        justify-content:center;font-weight:700;font-size:1.1rem;
+        background:#070b14;border:1px dashed var(--linea);color:#3f5178}
+ .ficha.hecha{background:#10321f;border:1px solid var(--verde);color:var(--verde)}
+
+ .aviso{margin-top:16px;padding:16px;border-radius:10px;display:none}
+ .aviso.visible{display:block}
+ .aviso.bien{background:#10321f;border-left:4px solid var(--verde)}
+ .aviso.mal{background:#2e1119;border-left:4px solid var(--rojo);color:#ffc2cc}
+ .lugar{font-size:1.3rem;font-weight:700;color:var(--ambar);margin-top:8px;line-height:1.35}
+
+ .final{margin-top:20px;padding:24px;border-radius:12px;background:#0e2a33;
+        border:2px solid var(--cian);text-align:center}
+ .clave{font-size:2rem;font-weight:800;letter-spacing:.28em;color:var(--cian);
+        margin:10px 0;word-break:break-all}
+ .cierre{font-size:1.05rem;line-height:1.6;margin-top:12px;color:var(--tinta)}
+ .pie{margin-top:26px;color:var(--tenue);font-size:.8rem;text-align:center;line-height:1.7}
+ [hidden]{display:none!important}
+</style>
+
+<h1 id="titulo">RUTA DE ACCESO</h1>
+<div class="sub" id="quien"></div>
+
+<!-- 1. todavia no han metido su codigo de arranque -->
+<section id="pasoArranque" hidden>
+  <div class="tarjeta">
+    Su código de arranque se lo da la organización. Escríbanlo aquí para saber
+    dónde empieza su ruta.
+  </div>
+  <label for="inCodigo">Código de arranque</label>
+  <input id="inCodigo" autocomplete="off" autocapitalize="characters"
+         autocorrect="off" spellcheck="false" placeholder="EJEMPLO-1234">
+  <button id="btnArrancar">Empezar</button>
+</section>
+
+<!-- 2. escanearon un cartel: aqui esta su reto -->
+<section id="pasoReto" hidden>
+  <div class="tarjeta">
+    <div class="estacion" id="etiquetaEstacion"></div>
+    <div class="reto" id="textoReto"></div>
+  </div>
+  <label for="inRespuesta">Su respuesta</label>
+  <input id="inRespuesta" autocomplete="off" autocapitalize="characters"
+         autocorrect="off" spellcheck="false" placeholder="escriban aquí">
+  <button id="btnResponder">Comprobar</button>
+</section>
+
+<!-- 3. entraron sin escanear nada -->
+<section id="pasoEsperar" hidden>
+  <div class="tarjeta" id="textoEsperar"></div>
+</section>
+
+<div class="marcador" id="marcador"></div>
+<div class="aviso" id="aviso"></div>
+
+<div class="final" id="final" hidden>
+  <div style="color:var(--tenue);font-size:.82rem;letter-spacing:.16em">CLAVE DE ACCESO</div>
+  <div class="clave" id="clave"></div>
+  <div class="cierre" id="cierre"></div>
+</div>
+
+<div class="pie" id="pie">Su avance se guarda en este teléfono. Usen siempre el mismo.</div>
+
+<script src="../js/pistas-datos.js"></script>
+<script src="../js/pistas.js"></script>
+<script>
+const R = window.CQ.ruta;
+const $ = id => document.getElementById(id);
+
+if (!R.datos) {
+  document.body.innerHTML = "<h1>Ruta sin configurar</h1>" +
+    "<p>Falta generar las pistas con herramientas/generar_pistas.py.</p>";
+} else {
+  $("titulo").textContent = R.datos.titulo || "RUTA DE ACCESO";
+  const TOTAL = R.total();
+
+  /* La ficha del cartel viaja en la direccion: .../pistas/?e=xxxx */
+  const ficha = (function () {
+    const m = /[?&]e=([A-Za-z0-9]+)/.exec(location.search || "");
+    return m ? m[1] : null;
+  })();
+
+  let estacionAqui = null;      /* en que estacion estamos, si escanearon */
+
+  /* ------------------------------- pintar ------------------------------- */
+  function pintar() {
+    const g = R.leer();
+    $("quien").textContent = g.equipo
+      ? g.equipo + " · " + hechas(g) + " de " + TOTAL
+      : "Resuelvan los retos de las estaciones para armar la clave.";
+
+    let html = "";
+    for (let i = 1; i <= TOTAL; i++) {
+      const f = g.fragmentos && g.fragmentos[i];
+      html += "<div class='ficha" + (f ? " hecha" : "") + "'>" + (f || "?") + "</div>";
+    }
+    $("marcador").innerHTML = html;
+
+    const clave = armar(g);
+    $("final").hidden = !clave;
+    if (clave) {
+      $("clave").textContent = clave;
+      $("cierre").textContent = R.datos.cierre ||
+        "Escriban esta clave en el juego para entrar.";
+    }
+  }
+
+  function hechas(g) {
+    return Object.keys((g && g.fragmentos) || {}).length;
+  }
+
+  /* La clave sale de juntar los fragmentos en el orden de las estaciones.
+     No llega dentro de ningun codigo: sin todos, no hay clave. */
+  function armar(g) {
+    const f = (g && g.fragmentos) || {};
+    let clave = "";
+    for (let i = 1; i <= TOTAL; i++) {
+      if (!f[i]) return null;
+      clave += f[i];
+    }
+    return clave;
+  }
+
+  function decir(texto, bien) {
+    const a = $("aviso");
+    a.className = "aviso visible " + (bien ? "bien" : "mal");
+    a.innerHTML = texto;
+  }
+  function callar() { $("aviso").className = "aviso"; }
+
+  function mostrar(cual) {
+    ["pasoArranque", "pasoReto", "pasoEsperar"].forEach(function (id) {
+      $(id).hidden = (id !== cual);
+    });
+  }
+
+  function escapar(t) {
+    return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;");
+  }
+
+  /* ------------------------- 1. codigo de arranque ---------------------- */
+  $("btnArrancar").onclick = function () {
+    const codigo = ($("inCodigo").value || "").trim();
+    if (!codigo) { decir("Escriban el código que les dio la organización.", false); return; }
+    this.disabled = true;
+    decir("Comprobando…", true);
+    R.arrancar(codigo).then(function (a) {
+      $("btnArrancar").disabled = false;
+      if (!a) { decir("Ese código no es. Pídanlo a la organización.", false); return; }
+      const g = R.leer();
+      g.equipo = a.equipo;
+      g.fragmentos = g.fragmentos || {};
+      R.guardar(g);
+      decir("Listo, <b>" + escapar(a.equipo) + "</b>. Su primera estación:" +
+            "<div class='lugar'>" + escapar(a.primera) + "</div>" +
+            "Busquen el cartel y escaneen el código QR.", true);
+      arrancarPaso();
+      pintar();
+    }).catch(function () {
+      $("btnArrancar").disabled = false;
+      decir("No se pudo comprobar el código.", false);
+    });
+  };
+
+  /* --------------------------- 2. resolver el reto ---------------------- */
+  $("btnResponder").onclick = function () {
+    const g = R.leer();
+    const respuesta = ($("inRespuesta").value || "").trim();
+    if (!respuesta) { decir("Escriban su respuesta.", false); return; }
+    if (!estacionAqui) return;
+
+    const cofre = R.cofres(g.equipo)[estacionAqui.id];
+    if (!cofre) { decir("Este cartel no es de su ruta.", false); return; }
+
+    this.disabled = true;
+    decir("Comprobando…", true);
+    R.abrir(cofre, respuesta).then(function (c) {
+      $("btnResponder").disabled = false;
+      if (!c) { decir("Esa no es. Vuelvan a mirar el reto.", false); return; }
+
+      const yaEstaba = !!(g.fragmentos && g.fragmentos[c.n]);
+      g.fragmentos = g.fragmentos || {};
+      g.fragmentos[c.n] = c.fragmento;
+      R.guardar(g);
+      $("inRespuesta").value = "";
+
+      let msg = (yaEstaba ? "Esta ya la tenían. " : "¡Correcto! ") +
+                "Fragmento <b>" + escapar(c.fragmento) + "</b>.";
+      msg += c.siguiente
+        ? "<div class='lugar'>" + escapar(c.siguiente) + "</div>Ahí está su siguiente cartel."
+        : "<div class='lugar'>Era la última de su ruta.</div>" +
+          "Abajo tienen su clave completa.";
+      decir(msg, true);
+      pintar();
+    }).catch(function () {
+      $("btnResponder").disabled = false;
+      decir("No se pudo comprobar la respuesta.", false);
+    });
+  };
+
+  [["inCodigo", "btnArrancar"], ["inRespuesta", "btnResponder"]].forEach(function (par) {
+    $(par[0]).addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); $(par[1]).click(); }
+    });
+  });
+
+  /* ---------------------------- que pantalla toca ----------------------- */
+  function arrancarPaso() {
+    const g = R.leer();
+    if (!g.equipo) { mostrar("pasoArranque"); return; }
+
+    if (!ficha) {
+      mostrar("pasoEsperar");
+      $("textoEsperar").innerHTML = armar(g)
+        ? "Ya tienen la clave completa. Está aquí abajo."
+        : "Vayan a su siguiente estación y escaneen el código QR del cartel.";
+      return;
+    }
+
+    mostrar("pasoEsperar");
+    $("textoEsperar").textContent = "Leyendo el cartel…";
+    R.reto(ficha).then(function (r) {
+      if (!r) {
+        $("textoEsperar").textContent =
+          "Ese código no corresponde a ningún cartel de la ruta.";
+        return;
+      }
+      estacionAqui = r;
+      $("etiquetaEstacion").textContent = "ESTACIÓN " + r.id;
+      $("textoReto").textContent = r.acertijo;
+      mostrar("pasoReto");
+      setTimeout(function () { $("inRespuesta").focus(); }, 100);
+    }).catch(function () {
+      $("textoEsperar").textContent = "No se pudo leer el cartel. Revisen la conexión.";
+    });
+  }
+
+  arrancarPaso();
+  pintar();
+  callar();
+}
+</script>
