@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Panel de la competencia — SECCIÓN 7</title>
+<style>
+ :root{--fondo:#0b1020;--panel:#141b2e;--linea:#293754;--tinta:#dbe6f5;
+       --cian:#1fb8d4;--verde:#5fce84;--rojo:#f0788c;--ambar:#f5c14e;--tenue:#7c8fb0}
+ *{box-sizing:border-box}
+ body{margin:0;background:var(--fondo);color:var(--tinta);
+      font:14px/1.6 system-ui,Segoe UI,sans-serif;padding:1.5rem}
+ h1{font-size:1.3rem;margin:0 0 .3rem} h2{font-size:1rem;margin:1.6rem 0 .6rem;color:var(--cian)}
+ .sub{color:var(--tenue);margin-bottom:1.2rem}
+ .aviso{background:#2a1a1a;border-left:4px solid var(--ambar);padding:.8rem 1rem;
+        border-radius:4px;margin-bottom:1.2rem;color:#f5d9a8}
+ input,button{font:inherit;padding:.5rem .7rem;border-radius:4px;
+   border:1px solid var(--linea);background:#070b14;color:var(--tinta)}
+ input{width:100%;max-width:640px}
+ button{cursor:pointer;background:#1b2740}
+ button:hover{border-color:var(--cian)}
+ button.principal{background:#0f6d84;border-color:var(--cian)}
+ label{display:block;margin:.7rem 0 .2rem;color:var(--tenue);font-size:.85rem}
+ table{border-collapse:collapse;width:100%;margin-top:.5rem;font-size:.9rem}
+ th,td{text-align:left;padding:.45rem .6rem;border-bottom:1px solid var(--linea);
+       vertical-align:top}
+ th{color:var(--tenue);font-weight:600;font-size:.8rem;text-transform:uppercase}
+ tr:hover td{background:#101828}
+ .num{text-align:right;font-variant-numeric:tabular-nums}
+ .ok{color:var(--verde)} .mal{color:var(--rojo)} .tenue{color:var(--tenue)}
+ pre{background:#070b14;border:1px solid var(--linea);border-radius:4px;
+     padding:.7rem;overflow:auto;max-height:22rem;font-size:.82rem;margin:.3rem 0 0}
+ details summary{cursor:pointer;color:var(--cian)}
+ .barra{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin:.8rem 0}
+ .chip{background:#1b2740;border:1px solid var(--linea);border-radius:999px;
+       padding:.15rem .6rem;font-size:.8rem}
+</style>
+</head>
+<body>
+  <h1>Panel de la competencia</h1>
+  <div class="sub">Avance de los equipos, intentos y código enviado.</div>
+
+  <div class="aviso">
+    <strong>Este archivo no se publica.</strong> Usa la clave <code>service_role</code>,
+    que puede leer y borrar todo. Ábrelo desde tu disco y no lo subas a ningún
+    sitio web. La clave se guarda solo en este navegador.
+  </div>
+
+  <label>URL del proyecto de Supabase</label>
+  <input id="url" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off">
+  <label>Clave <code>service_role</code> (Project Settings → API)</label>
+  <input id="clave" type="password" placeholder="eyJ..." autocomplete="off">
+  <div class="barra">
+    <button id="cargar" class="principal">Cargar</button>
+    <button id="auto">Actualizar cada 15 s</button>
+    <button id="csv">Descargar CSV de intentos</button>
+    <button id="olvidar">Olvidar la clave</button>
+    <span id="estado" class="tenue"></span>
+  </div>
+
+  <div id="salida"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const RECUERDO = "seccion7-panel";
+let temporizador = null;
+
+try {
+  const g = JSON.parse(localStorage.getItem(RECUERDO) || "null");
+  if (g) { $("url").value = g.url || ""; $("clave").value = g.clave || ""; }
+} catch (e) {}
+
+function recordar() {
+  try {
+    localStorage.setItem(RECUERDO, JSON.stringify({ url: $("url").value.trim(), clave: $("clave").value.trim() }));
+  } catch (e) {}
+}
+function escapar(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function pedir(tabla, consulta) {
+  const base = $("url").value.trim().replace(/\/+$/, "");
+  const clave = $("clave").value.trim();
+  if (!base || !clave) return Promise.reject(new Error("Falta la URL o la clave"));
+  return fetch(base + "/rest/v1/" + tabla + (consulta || ""), {
+    headers: { apikey: clave, Authorization: "Bearer " + clave }
+  }).then(r => {
+    if (!r.ok) return r.text().then(t => { throw new Error("HTTP " + r.status + " — " + t.slice(0, 200)); });
+    return r.json();
+  });
+}
+</script>
+<script>
+let ultimosIntentos = [];
+
+function segundos(s) {
+  s = s | 0;
+  const m = Math.floor(s / 60);
+  return (m < 10 ? "0" : "") + m + ":" + ((s % 60) < 10 ? "0" : "") + (s % 60);
+}
+function cuando(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso), ahora = new Date();
+  const min = Math.round((ahora - d) / 60000);
+  if (min < 1) return "ahora";
+  if (min < 60) return "hace " + min + " min";
+  return d.toLocaleString();
+}
+
+function pintar(marcador, intentos) {
+  ultimosIntentos = intentos;
+
+  /* qué encargos resolvió cada equipo, y cuándo */
+  const porEquipo = {};
+  intentos.forEach(i => {
+    const e = porEquipo[i.equipo_id] || (porEquipo[i.equipo_id] = { retos: {}, intentos: 0 });
+    e.intentos++;
+    if (i.paso && !e.retos[i.reto]) e.retos[i.reto] = i;
+  });
+
+  const orden = marcador.slice().sort((a, b) =>
+    (b.encargos_resueltos - a.encargos_resueltos) || (b.puntos - a.puntos) ||
+    ((a.segundos || 1e9) - (b.segundos || 1e9)));
+
+  let html = "<h2>Equipos (" + marcador.length + ")</h2><table><tr>" +
+    "<th>#</th><th>Equipo</th><th class='num'>Resueltos</th><th class='num'>Puntos</th>" +
+    "<th class='num'>Intentos</th><th class='num'>Tiempo</th><th>Encargos</th>" +
+    "<th>Última actividad</th></tr>";
+  orden.forEach((e, n) => {
+    const d = porEquipo[e.id] || { retos: {}, intentos: 0 };
+    const chips = Object.keys(d.retos).sort()
+      .map(r => "<span class='chip ok'>" + escapar(r) + "</span>").join(" ");
+    html += "<tr><td class='tenue'>" + (n + 1) + "</td><td><strong>" + escapar(e.nombre) +
+      "</strong></td><td class='num ok'>" + e.encargos_resueltos + "</td>" +
+      "<td class='num'>" + e.puntos + "</td><td class='num tenue'>" + e.intentos_totales +
+      "</td><td class='num tenue'>" + segundos(e.segundos) + "</td><td>" + (chips || "<span class='tenue'>—</span>") +
+      "</td><td class='tenue'>" + cuando(e.ultima_actividad) + "</td></tr>";
+  });
+  html += "</table>";
+
+  /* dónde se atasca la gente: esto vale más que el marcador */
+  const porReto = {};
+  intentos.forEach(i => {
+    const r = porReto[i.reto] || (porReto[i.reto] = { intentos: 0, exitos: 0, equipos: {} });
+    r.intentos++;
+    if (i.paso) r.exitos++;
+    r.equipos[i.equipo_id] = true;
+  });
+  html += "<h2>Por encargo</h2><table><tr><th>Encargo</th><th class='num'>Equipos que lo intentaron</th>" +
+    "<th class='num'>Lo resolvieron</th><th class='num'>Intentos por equipo</th></tr>";
+  Object.keys(porReto).sort().forEach(r => {
+    const d = porReto[r], nEquipos = Object.keys(d.equipos).length;
+    const resolvieron = new Set(intentos.filter(i => i.reto === r && i.paso).map(i => i.equipo_id)).size;
+    html += "<tr><td>" + escapar(r) + "</td><td class='num'>" + nEquipos + "</td>" +
+      "<td class='num " + (resolvieron ? "ok" : "mal") + "'>" + resolvieron + "</td>" +
+      "<td class='num tenue'>" + (nEquipos ? (d.intentos / nEquipos).toFixed(1) : "—") + "</td></tr>";
+  });
+  html += "</table>";
+
+  /* los últimos envíos, con el código */
+  html += "<h2>Últimos envíos</h2>";
+  intentos.slice(0, 40).forEach(i => {
+    html += "<details><summary>" +
+      (i.paso ? "<span class='ok'>✓</span> " : "<span class='mal'>✗</span> ") +
+      escapar(i.equipo_nombre) + " — " + escapar(i.reto) +
+      " <span class='tenue'>(" + i.pasados + "/" + i.total + " casos · " + cuando(i.creado_en) + ")</span>" +
+      "</summary><pre>" + escapar(i.codigo || "(sin código)") +
+      (i.error ? "\n\n--- error ---\n" + escapar(i.error) : "") + "</pre></details>";
+  });
+
+  $("salida").innerHTML = html;
+}
+
+function cargar() {
+  recordar();
+  $("estado").textContent = "cargando…";
+  Promise.all([
+    pedir("marcador", "?select=*"),
+    pedir("intentos", "?select=*&order=creado_en.desc&limit=500")
+  ]).then(([m, i]) => {
+    pintar(m, i);
+    $("estado").textContent = "actualizado " + new Date().toLocaleTimeString();
+  }).catch(e => {
+    $("estado").innerHTML = "<span class='mal'>" + escapar(e.message) + "</span>";
+  });
+}
+
+$("cargar").onclick = cargar;
+$("auto").onclick = function () {
+  if (temporizador) {
+    clearInterval(temporizador); temporizador = null;
+    this.textContent = "Actualizar cada 15 s";
+  } else {
+    cargar();
+    temporizador = setInterval(cargar, 15000);
+    this.textContent = "Detener actualización";
+  }
+};
+$("olvidar").onclick = function () {
+  try { localStorage.removeItem(RECUERDO); } catch (e) {}
+  $("clave").value = "";
+  $("estado").textContent = "clave olvidada en este navegador";
+};
+$("csv").onclick = function () {
+  if (!ultimosIntentos.length) { $("estado").textContent = "carga los datos primero"; return; }
+  const cols = ["creado_en", "equipo_nombre", "reto", "paso", "pasados", "total",
+                "puntos", "pista_usada", "segundos", "error", "codigo"];
+  const escapaCSV = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  const filas = [cols.join(",")].concat(
+    ultimosIntentos.map(i => cols.map(c => escapaCSV(i[c])).join(",")));
+  const blob = new Blob([filas.join("\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "intentos-" + new Date().toISOString().slice(0, 10) + ".csv";
+  a.click();
+};
+
+if ($("url").value && $("clave").value) cargar();
+</script>
+</body>
+</html>

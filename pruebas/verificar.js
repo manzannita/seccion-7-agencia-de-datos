@@ -498,6 +498,50 @@ async function principal() {
     'resolver todo da ' + maxRetos + ' XP');
 
 
+  /* ---------------------------- 4d. registro de resultados -------------- */
+  titulo('REGISTRO DE RESULTADOS');
+
+  const R = CQ.registro;
+  comprobar('sin configurar, el registro queda apagado', R && R.activo() === false,
+    'config.js vacío');
+
+  /* Lo esencial: sin nube el juego tiene que funcionar igual. La partida
+     completa de más arriba ya corrió con el registro apagado y pasó entera,
+     así que basta con comprobar que las llamadas no revientan. */
+  let reventó = false;
+  try {
+    R.anotarIntento({ equipo: 'X', reto: 'oro', codigo: 'x = 1', paso: true,
+                      pasados: 5, total: 5, puntos: 100, segundos: 42 });
+    R.recuperarEquipo();
+  } catch (e) { reventó = true; }
+  comprobar('anotar un intento sin configuración no rompe nada', !reventó);
+
+  await R.abrirEquipo('Equipo de prueba').then(function (id) {
+    comprobar('dar de alta un equipo sin configuración devuelve nulo', id === null);
+  });
+
+  /* El esquema y el cliente tienen que hablar de las mismas columnas. */
+  const sql = fs.readFileSync(ruta.join(RAIZ, 'herramientas', 'supabase.sql'), 'utf8');
+  const cliente = fs.readFileSync(ruta.join(RAIZ, 'js', 'registro.js'), 'utf8');
+  const columnas = ['equipo_id', 'equipo_nombre', 'reto', 'funcion', 'codigo', 'paso',
+                    'pasados', 'total', 'error', 'puntos', 'pista_usada', 'segundos'];
+  const faltantes = columnas.filter(c => !sql.includes(c) || !cliente.includes(c));
+  comprobar('el esquema y el cliente usan las mismas columnas', faltantes.length === 0,
+    faltantes.length ? 'faltan: ' + faltantes.join(', ') : columnas.length + ' columnas');
+
+  /* La regla de seguridad: los equipos escriben, no leen. */
+  comprobar('el esquema NO da permiso de lectura a los equipos',
+    !/for\s+select\s+to\s+anon/i.test(sql), 'solo hay políticas de insert');
+  comprobar('las dos tablas tienen seguridad por fila activada',
+    (sql.match(/enable row level security/gi) || []).length === 2);
+
+  /* El panel usa la clave que lee todo: no puede publicarse. */
+  const flujo = fs.readFileSync(ruta.join(RAIZ, '.github', 'workflows', 'desplegar.yml'), 'utf8');
+  comprobar('el despliegue rechaza una clave service_role', /service_role/.test(flujo));
+  comprobar('el despliegue no publica el panel de organizadores',
+    /panel\.html/.test(flujo) && !/cp herramientas/.test(flujo));
+
+
   /* --------------------------------------------- 5. teclado ------------- */
   titulo('TECLADO');
   let bloqueada = false;

@@ -59,6 +59,19 @@ jobs:
           if find _sitio -name "verificar.js" -o -name "puente.py" | grep . ; then
             echo "ERROR: se coló un archivo de las pruebas"; exit 1
           fi
+          # El panel de organizadores usa la clave service_role, que lee y borra
+          # todo. Si alguien la pega por error en config.js, esto para el
+          # despliegue antes de publicarla. Se decodifica el JWT y se mira el rol.
+          for token in $(grep -rhoE 'eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}' _sitio/ || true); do
+            carga=$(echo "$token" | cut -d. -f2)
+            relleno=$(( 4 - ${#carga} % 4 )); [ $relleno -lt 4 ] && carga="$carga$(printf '=%.0s' $(seq $relleno))"
+            if echo "$carga" | base64 -d 2>/dev/null | grep -q "service_role"; then
+              echo "ERROR: hay una clave service_role en el sitio. Usa la clave anon."; exit 1
+            fi
+          done
+          if [ -e _sitio/panel.html ] || find _sitio -name "panel.html" | grep . ; then
+            echo "ERROR: el panel de organizadores no se publica"; exit 1
+          fi
           echo "Sitio limpio. Archivos:"
           find _sitio -type f | sort
           du -sh _sitio

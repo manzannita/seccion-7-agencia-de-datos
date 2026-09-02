@@ -61,6 +61,24 @@ cabeza; los ya resueltos, un **`✓`** verde. El progreso se guarda solo en el
 navegador, y **el código escrito se conserva** aunque se cierre la pestaña: el
 botón CONTINUAR devuelve la partida con los borradores intactos.
 
+## Varios equipos a la vez
+
+El juego puede registrar en la nube lo que hace cada equipo, para que veas el
+avance de todos desde un panel. Se monta una vez, en unos cinco minutos:
+**`herramientas/COMPETENCIA.md`**.
+
+Lo importante en dos líneas:
+
+- **Se guarda el código, no solo el puntaje.** Un navegador puede reportar el
+  número que quiera; el código enviado, en cambio, se revisa. Y deja ver dónde
+  se atascó cada equipo.
+- **Los equipos escriben pero no leen.** La clave que viaja en la página solo
+  puede insertar. Si pudiera leer, un equipo consultaría la base y vería el
+  código de sus compañeros.
+- **Sin nube el juego funciona igual.** Si no hay configuración, o si se cae la
+  red, cada equipo guarda su progreso en su navegador y los envíos pendientes
+  esperan en cola. La partida nunca se detiene por un problema de red.
+
 ## La lista de encargos
 
 Lo que dice la directora al empezar no alcanza: son siete salas y cinco
@@ -364,6 +382,8 @@ codex-quest/
 ├── index.html            interfaz: HUD, diálogos, editor, pantallas
 ├── js/
 │   ├── retos.js          ← historia, personajes y retos (editar aquí)
+│   ├── config.js         URL y clave de la base de resultados
+│   ├── registro.js       manda los intentos a la nube, con cola si falla
 │   ├── piloto.py         corrector: corre el código del equipo en Python
 │   ├── arte.js           paleta y dibujo de personajes y casillas
 │   ├── mapa.js           planta del edificio: salas, pasillos, mobiliario
@@ -372,6 +392,10 @@ codex-quest/
 ├── sprites/              PNG de los personajes (ver LEEME.md)
 ├── vendor/pyodide/       intérprete guardado, opcional (13 MB, sin internet)
 ├── herramientas/
+│   ├── COMPETENCIA.md        cómo montar la competencia (empieza aquí)
+│   ├── supabase.sql          crea la base de datos de resultados
+│   ├── panel.html            panel de organizadores (NO se publica)
+│   ├── prompt-retos.md       cómo escribir retos nuevos
 │   ├── descargar_python.py   deja el intérprete guardado
 │   └── hash.html             genera respuestaHash para retos escritos
 ├── pruebas/              opcional, con Node + Python

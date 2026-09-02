@@ -88,7 +88,7 @@ function arrancar() {
   global.setTimeout = (f, ms) => realTimeout(f, Math.min(ms || 0, 40));
   global.clearTimeout = clearTimeout;
 
-  ['js/arte.js', 'js/mapa.js', 'js/codigo.js', 'js/retos.js', 'js/juego.js'].forEach(function (f) {
+  ['js/config.js', 'js/registro.js', 'js/arte.js', 'js/mapa.js', 'js/codigo.js', 'js/retos.js', 'js/juego.js'].forEach(function (f) {
     const src = fs.readFileSync(path.join(RAIZ, f), 'utf8');
     if (f === 'js/retos.js') { global.JUEGO = eval(src + String.fromCharCode(10) + ';JUEGO'); }
     else eval(src);

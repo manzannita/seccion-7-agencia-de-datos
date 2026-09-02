@@ -8,6 +8,7 @@
 "use strict";
 
 const A = window.CQ.arte, M = window.CQ.mapa, EJEC = window.CQ.codigo;
+const REG = window.CQ.registro || { anotarIntento: function () {}, abrirEquipo: function () { return Promise.resolve(null); }, recuperarEquipo: function () { return null; }, activo: function () { return false; } };
 const S = A.SUELO, O = A.OBJETO;
 
 const T = 16;                    /* lado de la casilla */
@@ -800,11 +801,27 @@ function enviar() {
       pintarCasos(null);
       est.className = "mal";
       est.textContent = (r && r.error) ? r.error : "No se pudo ejecutar el código.";
+      REG.anotarIntento({
+        equipo: estado.equipo, reto: retoId, funcion: retoActual.funcion,
+        codigo: fuente, paso: false, pasados: 0, total: 0,
+        error: (r && r.error) || 'sin respuesta',
+        pista: !!estado.pistas[retoId], segundos: Math.round(estado.segundos)
+      });
       return;
     }
     pintarCasos(r.resultados);
     const pasaron = r.resultados.filter(function (x) { return x.paso; }).length;
     const total = r.resultados.length;
+
+    /* Se registra TODO intento, no solo el que acierta: el puntaje que
+       reporta un navegador no es confiable, pero el código que escribieron
+       sí sirve para revisar después y para ver dónde se atascaron. */
+    REG.anotarIntento({
+      equipo: estado.equipo, reto: retoId, funcion: retoActual.funcion,
+      codigo: fuente, paso: pasaron === total, pasados: pasaron, total: total,
+      puntos: pasaron === total ? puntosDe(retoActual) : 0,
+      pista: !!estado.pistas[retoId], segundos: Math.round(estado.segundos)
+    });
     if (pasaron === total) { acertar(puntosDe(retoActual)); }
     else {
       sfx.mal();
@@ -1045,6 +1062,7 @@ function conectar() {
     estado.vistos = {}; estado.leidos = {};
     estado.vioIntro = false; estado.terminado = false;
     M.construir(); colocarEntidades();
+    REG.abrirEquipo(estado.equipo);
     empezar(true);
   });
   inNombre.addEventListener("keydown", function (e) {
@@ -1054,6 +1072,7 @@ function conectar() {
 
   $("btnContinuar").addEventListener("click", function () {
     if (!cargar()) { inNombre.placeholder = "No hay partida guardada"; return; }
+    REG.recuperarEquipo();
     empezar(false);
   });
 
