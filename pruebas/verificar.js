@@ -704,10 +704,17 @@ async function principal() {
     /NO se vera en pantalla/.test(aplicador));
   /* La cadena de Supabase trae [YOUR-PASSWORD] como hueco. Sustituirlo a mano
      es donde más gente se equivoca, y una contraseña con @ o # rompe el URI. */
-  comprobar('  rellena solo el hueco de la contraseña',
-    /\[YOUR-PASSWORD\]|"\[" in cad/.test(aplicador) && /re\.sub/.test(aplicador));
-  comprobar('  y la codifica, para que @ o # no rompan la cadena',
+  /* Los menús de Supabase cambian de sitio cada pocos meses. En vez de mandar
+     a nadie a buscar la cadena, el script la arma con el identificador que ya
+     está en config.js y prueba por dónde conecta. Solo pide la contraseña. */
+  comprobar('  el proyecto se lee de config.js, no se busca a mano',
+    /def referencia_del_proyecto/.test(aplicador) && /js.{1,3}config\.js/.test(aplicador));
+  comprobar('  y prueba varias rutas hasta dar con la que conecta',
+    /def candidatas/.test(aplicador) && /pooler\.supabase\.com/.test(aplicador));
+  comprobar('  la contraseña se codifica: @ o # no rompen la cadena',
     /quote\(pwd, safe=""\)/.test(aplicador));
+  comprobar('  y distingue "contraseña mala" de "no hay ruta"',
+    /def es_de_contrasena/.test(aplicador));
 
 
   /* --------------------------------------------- 5. teclado ------------- */

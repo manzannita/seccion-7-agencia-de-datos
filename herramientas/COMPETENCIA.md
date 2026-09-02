@@ -29,10 +29,12 @@ equipos y un panel donde ves el avance de todos.
    python herramientas/aplicar_sql.py
    ```
 
-   La primera vez pide la cadena de conexión —en Supabase, botón **Connect**
-   arriba, pestaña *Session pooler*, copiar el URI— y la guarda en
-   `herramientas/.conexion`, que está fuera del repositorio. Las veces
-   siguientes no pregunta nada: un comando y listo.
+   La primera vez pide **solo la contraseña de la base de datos**. El resto lo
+   arma solo: saca el identificador del proyecto de `js/config.js` y prueba por
+   dónde conecta. No hay que buscar nada en los menús de Supabase.
+
+   La contraseña queda guardada en `herramientas/.conexion`, fuera del
+   repositorio. Las veces siguientes no pregunta nada: un comando y listo.
 
    **La manual:** abre **SQL Editor**, pega el contenido completo de
    `herramientas/supabase.sql` y dale a *Run*.

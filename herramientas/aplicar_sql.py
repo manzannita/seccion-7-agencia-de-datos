@@ -59,49 +59,102 @@ def revisar(cad):
     return None
 
 
+REGIONES = ["us-east-1", "us-east-2", "us-west-1", "ca-central-1", "sa-east-1",
+            "eu-west-1", "eu-central-1", "ap-southeast-1"]
+
+
+def referencia_del_proyecto():
+    ruta = os.path.join(RAIZ, "js", "config.js")
+    if not os.path.exists(ruta):
+        return None
+    with open(ruta, encoding="utf-8") as f:
+        texto = f.read()
+    m = re.search(r"https://([a-z0-9]+)\.supabase\.co", texto)
+    return m.group(1) if m else None
+
+
+def candidatas(ref, pwd):
+    clave = quote(pwd, safe="")
+    lista = ["postgresql://postgres:%s@db.%s.supabase.co:5432/postgres" % (clave, ref)]
+    for reg in REGIONES:
+        lista.append("postgresql://postgres.%s:%s@aws-0-%s.pooler.supabase.com:5432/postgres"
+                     % (ref, clave, reg))
+    return lista
+
+
+def es_de_contrasena(fallo):
+    f = fallo.lower()
+    return "password" in f or "authentication" in f or "autenticacion" in f
+
+
 def pedir_cadena():
     if not sys.stdin.isatty():
-        aviso = [
-            "",
-            "  Este script pide la contrasena por teclado y necesita una terminal.",
-            "  Abre PowerShell y ejecutalo ahi:",
-            "",
-            "      cd " + RAIZ,
-            "      python herramientas/aplicar_sql.py",
-            "",
-        ]
+        aviso = ["",
+                 "  Este script pide la contrasena por teclado y necesita una terminal.",
+                 "  Abre PowerShell y ejecutalo ahi:",
+                 "",
+                 "      cd " + RAIZ,
+                 "      python herramientas/aplicar_sql.py",
+                 ""]
         raise SystemExit(chr(10).join(aviso))
 
+    ref = referencia_del_proyecto()
     print("")
-    print("  Necesito la cadena de conexion de tu base.")
-    print("  En Supabase: boton Connect (arriba) -> Session pooler -> copiar el URI.")
-    print("  Empieza por postgresql:// y lleva la contrasena de la base.")
-    print("")
-    print("  OJO: lo que pegues NO se vera en pantalla. Es normal.")
-    print("  En esta ventana se pega con clic derecho, no con Ctrl+V.")
-    print("")
-    for intento in range(3):
-        cad = getpass.getpass("  Pega la cadena y pulsa Enter: ").strip()
+    if not ref:
+        print("  Pega la cadena de conexion de Supabase (Connect -> Session pooler).")
+        print("  OJO: lo que pegues NO se vera. Se pega con clic derecho.")
+        print("")
+        for _ in range(3):
+            cad = getpass.getpass("  Cadena de conexion: ").strip()
+            if "[" in cad and "]" in cad:
+                pwd = getpass.getpass("  Contrasena de la base: ").strip()
+                if pwd:
+                    cad = re.sub(r"\[[^\]]*\]", quote(pwd, safe=""), cad, count=1)
+            motivo = revisar(cad)
+            if motivo is None:
+                return cad
+            print("  Esa cadena no sirve: " + motivo)
+        raise SystemExit("  Tres intentos fallidos.")
 
-        # La cadena que da Supabase trae [YOUR-PASSWORD] como hueco y hay que
-        # sustituirlo a mano. Es donde mas gente se equivoca, asi que se pide
-        # la contrasena aparte y se pone aqui. De paso se codifica, que una
-        # contrasena con @ o # rompe el URI sin decir por que.
-        if "[" in cad and "]" in cad:
-            print("")
-            print("  Esa cadena trae un hueco para la contrasena. Dimela y la pongo yo.")
-            print("  Si no la recuerdas: Project Settings -> Database -> Reset database password.")
-            pwd = getpass.getpass("  Contrasena de la base de datos: ").strip()
-            if pwd:
-                cad = re.sub(r"\[[^\]]*\]", quote(pwd, safe=""), cad, count=1)
-        motivo = revisar(cad)
-        if motivo is None:
-            return cad
-        print("  Esa cadena no sirve: " + motivo)
-        if intento < 2:
-            print("  Intentalo de nuevo.")
-            print("")
-    raise SystemExit("  Tres intentos fallidos. Revisa la cadena y vuelve a ejecutarlo.")
+    print("  Proyecto: " + ref + "   (leido de js/config.js)")
+    print("")
+    print("  Solo necesito la CONTRASENA DE LA BASE DE DATOS.")
+    print("  Es la que inventaste al crear el proyecto, no la de tu cuenta.")
+    print("  Si no la recuerdas, en los ajustes del proyecto busca")
+    print("  'Database password' y dale a Reset para poner una nueva.")
+    print("")
+    print("  OJO: lo que escribas NO se vera en pantalla. Es normal.")
+    print("")
+    for _ in range(3):
+        pwd = getpass.getpass("  Contrasena de la base de datos: ").strip()
+        if not pwd:
+            print("  No escribiste nada.")
+            continue
+        if pwd.startswith("postgres"):
+            motivo = revisar(pwd)
+            if motivo is None:
+                return pwd
+            print("  Esa cadena no sirve: " + motivo)
+            continue
+        print("")
+        print("  Buscando por donde conectar...")
+        mala = False
+        for cad in candidatas(ref, pwd):
+            host = urlparse(cad).hostname
+            try:
+                con = conectar(cad)
+                con.close()
+                print("  Conecta por " + host)
+                return cad
+            except Exception as e:
+                if es_de_contrasena(str(e)):
+                    mala = True
+                    break
+        print("  La contrasena no es correcta." if mala
+              else "  No pude conectar por ninguna ruta.")
+        print("")
+    raise SystemExit("  Tres intentos. Cambia la contrasena en Supabase y reintenta.")
+
 
 
 def cadena_conexion():
