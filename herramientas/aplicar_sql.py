@@ -39,8 +39,26 @@ def cadena_conexion():
             guardada = f.read().strip()
         if guardada:
             return guardada
-    print(__doc__.split("Dónde encontrar")[1].replace("la cadena:", "  La cadena está en:"))
-    cad = getpass.getpass("Pega la cadena de conexión (no se verá al escribir): ").strip()
+    # Sin terminal de verdad, getpass no puede leer nada y falla de forma
+    # confusa. Mejor decirlo claro antes de intentarlo.
+    if not sys.stdin.isatty():
+        aviso = [
+            "",
+            "  Este script pide la contrasena por teclado y necesita una terminal.",
+            "  Abre PowerShell y ejecutalo ahi:",
+            "",
+            "      cd " + RAIZ,
+            "      python herramientas/aplicar_sql.py",
+            "",
+            "  Solo hace falta la primera vez: despues queda guardada.",
+            "",
+        ]
+        raise SystemExit(chr(10).join(aviso))
+    print("")
+    print("  La cadena esta en Supabase: boton Connect (arriba) -> Session pooler.")
+    print("  Empieza por postgresql:// y lleva la contrasena de la base.")
+    print("")
+    cad = getpass.getpass("  Pega la cadena de conexion (no se vera al escribir): ").strip()
     if not cad:
         raise SystemExit("Sin cadena de conexión no puedo hacer nada.")
     with open(GUARDADO, "w", encoding="utf-8") as f:
