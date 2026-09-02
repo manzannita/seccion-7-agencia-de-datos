@@ -29,6 +29,7 @@ Al terminar salen tres comprobaciones y las tres tienen que dar bien:
 | 1 | `bien` en las dos tablas (seguridad por fila activada) |
 | 2 | `bien` en cada fila: permisos `INSERT` y nada más |
 | 3 | **cero filas** (el marcador no es legible por los equipos) |
+| 4 | `bien` en las dos tablas (el panel sí puede leer) |
 
 > Si la segunda dice `MAL: sobra TRUNCATE`, es porque el proyecto se creó con
 > los permisos por defecto de Supabase, que son más amplios de lo que necesita

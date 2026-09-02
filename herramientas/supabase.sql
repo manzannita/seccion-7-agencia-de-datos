@@ -71,6 +71,12 @@ grant insert on table intentos to anon;
 -- usage (no select) sobre la secuencia: basta para que la fila obtenga su id
 grant usage  on sequence intentos_id_seq to anon;
 
+-- Y el rol del PANEL, que es el único que puede leer. Hay que concedérselo a
+-- mano igual que al otro: con "Automatically expose new tables" desmarcada,
+-- Supabase no da permisos a ningún rol, tampoco a este.
+grant select on table equipos  to service_role;
+grant select on table intentos to service_role;
+
 -- =============================================================================
 -- Vista para el panel: una fila por equipo con lo que interesa de un vistazo.
 -- =============================================================================
@@ -122,3 +128,12 @@ group by table_name, grantee;
 select 'MAL: el marcador es legible por los equipos' as revision
 from information_schema.role_table_grants
 where grantee = 'anon' and table_name = 'marcador';
+
+-- 4) el panel SÍ debe poder leer (dos filas con 'bien')
+select table_name,
+       case when count(*) filter (where privilege_type = 'SELECT') > 0
+            then 'bien' else 'MAL: el panel no podra leer' end as revision
+from information_schema.role_table_grants
+where grantee = 'service_role' and table_schema = 'public'
+  and table_name in ('equipos', 'intentos')
+group by table_name;

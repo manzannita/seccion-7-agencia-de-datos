@@ -562,11 +562,20 @@ async function principal() {
     /revoke all on table intentos\s+from anon, authenticated/i.test(sql));
   comprobar('  no queda ningún revoke parcial, que dejaría TRUNCATE',
     !/revoke\s+select,\s*update,\s*delete/i.test(sql));
-  comprobar('  y solo se devuelve INSERT',
-    (sql.match(/grant insert on table/gi) || []).length === 2 &&
-    !/grant\s+(all|select|update|delete|truncate)\s+on table (equipos|intentos)/i.test(sql));
+  /* La prueba tiene que mirar A QUIÉN se concede: el panel sí necesita leer,
+     los equipos no. Sin el rol en la comprobación, cualquier permiso nuevo
+     para el panel la haría fallar sin motivo. */
+  const aAnon = (sql.match(/grant\s+[a-z, ]+on table \w+\s+to anon/gi) || []);
+  comprobar('  a los equipos solo se les devuelve INSERT',
+    aAnon.length === 2 && aAnon.every(g => /grant\s+insert\s/i.test(g)),
+    aAnon.join(' · ') || 'ninguno');
   comprobar('la vista del marcador no queda legible para los equipos',
     /revoke all on marcador from anon/i.test(sql));
+  /* Con "Automatically expose new tables" desmarcada, Supabase no concede
+     permisos a NINGÚN rol. Si solo se le dan a anon, el panel no puede leer. */
+  comprobar('el panel sí puede leer las dos tablas',
+    /grant select on table equipos\s+to service_role/i.test(sql) &&
+    /grant select on table intentos\s+to service_role/i.test(sql));
   comprobar('el cliente no lee nada de la base',
     !/return=representation/.test(cliente) && !/select=/.test(cliente),
     'el id del equipo se genera en el navegador');
