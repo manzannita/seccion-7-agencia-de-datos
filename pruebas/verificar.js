@@ -534,6 +534,16 @@ async function principal() {
     !/for\s+select\s+to\s+anon/i.test(sql), 'solo hay políticas de insert');
   comprobar('las dos tablas tienen seguridad por fila activada',
     (sql.match(/enable row level security/gi) || []).length === 2);
+  comprobar('los privilegios son explícitos, no heredados de la configuración',
+    /grant insert on table equipos/i.test(sql) && /grant insert on table intentos/i.test(sql));
+  comprobar('a los equipos se les quita leer, modificar y borrar',
+    /revoke select, update, delete on table equipos/i.test(sql) &&
+    /revoke select, update, delete on table intentos/i.test(sql));
+  comprobar('la vista del marcador no queda legible para los equipos',
+    /revoke all on marcador from anon/i.test(sql));
+  comprobar('el cliente no lee nada de la base',
+    !/return=representation/.test(cliente) && !/select=/.test(cliente),
+    'el id del equipo se genera en el navegador');
 
   /* El panel usa la clave que lee todo: no puede publicarse. */
   const flujo = fs.readFileSync(ruta.join(RAIZ, '.github', 'workflows', 'desplegar.yml'), 'utf8');

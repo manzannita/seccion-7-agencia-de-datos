@@ -50,15 +50,32 @@ function encolar(tabla, fila) {
   guardarCola(c);
 }
 
-function enviar(tabla, fila, devolver) {
-  return fetch(url(tabla) + (devolver ? "?select=id" : ""), {
+function enviar(tabla, fila) {
+  return fetch(url(tabla), {
     method: "POST",
-    headers: cabeceras(devolver ? { "Prefer": "return=representation" } : {}),
+    headers: cabeceras(),
     body: JSON.stringify(fila)
   }).then(function (r) {
     if (!r.ok) throw new Error("HTTP " + r.status);
-    return devolver ? r.json() : null;
+    return null;
   });
+}
+
+/* El identificador del equipo se genera AQUÍ, no lo devuelve la base.
+   Si lo pidiéramos de vuelta haría falta permiso de lectura, y entonces un
+   equipo podría leer la tabla y ver el código de los demás. Generándolo en el
+   navegador, la clave pública nunca necesita más que insertar. */
+function nuevoId() {
+  try {
+    if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+  } catch (e) {}
+  const az = "0123456789abcdef";
+  let s = "";
+  for (let i = 0; i < 36; i++) {
+    s += (i === 8 || i === 13 || i === 18 || i === 23) ? "-"
+       : (i === 14 ? "4" : az[Math.floor(Math.random() * 16)]);
+  }
+  return s;
 }
 
 registro.vaciarCola = function () {
@@ -80,14 +97,17 @@ registro.vaciarCola = function () {
 /* --------------------------- alta del equipo ----------------------------- */
 registro.abrirEquipo = function (nombre) {
   if (!activo) return Promise.resolve(null);
-  return enviar("equipos", { nombre: String(nombre || "").slice(0, 60) }, true)
-    .then(function (filas) {
-      equipoId = (filas && filas[0] && filas[0].id) || null;
-      try { localStorage.setItem("seccion7-equipo-id", equipoId || ""); } catch (e) {}
-      registro.vaciarCola();
+  equipoId = nuevoId();
+  try { localStorage.setItem("seccion7-equipo-id", equipoId); } catch (e) {}
+  const fila = { id: equipoId, nombre: String(nombre || "").slice(0, 60) };
+  return enviar("equipos", fila)
+    .then(function () { registro.vaciarCola(); return equipoId; })
+    .catch(function () {
+      /* sin red se juega igual: el alta espera en la cola y los intentos
+         que se hagan mientras tanto ya llevan este mismo identificador */
+      encolar("equipos", fila);
       return equipoId;
-    })
-    .catch(function () { return null; });   /* sin red, se juega igual */
+    });
 };
 
 registro.recuperarEquipo = function () {

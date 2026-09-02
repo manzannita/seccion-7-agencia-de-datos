@@ -8,13 +8,30 @@ equipos y un panel donde ves el avance de todos.
 ## 1. Crear la base de datos (una vez)
 
 1. Entra a **https://supabase.com** y crea una cuenta.
-2. Crea un proyecto. Anota la contraseña de la base: no la vas a necesitar
-   para esto, pero perderla es un fastidio.
+2. Crea un proyecto:
+   - **Región**: `East US (North Virginia)`. Medido desde Ecuador es la más
+     rápida (124 ms); São Paulo, pese a estar más cerca en el mapa, da 183 ms
+     porque el tráfico sube a Miami igual. De todas formas la diferencia es
+     irrelevante para este uso.
+   - **Contraseña de la base**: guárdala. No hace falta para esto, pero
+     perderla es un fastidio.
+   - **Seguridad**: las tres casillas dan igual, el SQL de abajo pone los
+     permisos a mano. Si quieres la configuración más prudente: deja
+     *Enable Data API* marcada (sin ella el juego no puede escribir), desmarca
+     *Automatically expose new tables* y marca *Enable automatic RLS*.
 3. Abre **SQL Editor** en el menú de la izquierda.
 4. Pega el contenido completo de `herramientas/supabase.sql` y dale a *Run*.
 
-Al final la consulta te devuelve dos filas con `rowsecurity = true`. Si no es
-así, algo no se ejecutó: vuelve a pegarlo entero.
+Al terminar salen tres comprobaciones y las tres tienen que dar bien:
+
+| Consulta | Qué debe decir |
+|---|---|
+| 1 | `bien` en las dos tablas (seguridad por fila activada) |
+| 2 | permisos `INSERT` y nada más, en las dos tablas |
+| 3 | **cero filas** (el marcador no es legible por los equipos) |
+
+Si alguna sale mal, vuelve a pegar el archivo entero: es idempotente, se puede
+ejecutar las veces que haga falta.
 
 ## 2. Conectar el juego
 
