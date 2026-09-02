@@ -502,23 +502,41 @@ async function principal() {
   titulo('REGISTRO DE RESULTADOS');
 
   const R = CQ.registro;
-  comprobar('sin configurar, el registro queda apagado', R && R.activo() === false,
-    'config.js vacío');
+  const conf = fs.readFileSync(ruta.join(RAIZ, 'js', 'config.js'), 'utf8');
+  const configurado = /URL:\s*"https/.test(conf);
+  comprobar('el registro sabe si hay configuración', R.activo() === configurado,
+    configurado ? 'configurado' : 'sin configurar, se juega en local');
 
-  /* Lo esencial: sin nube el juego tiene que funcionar igual. La partida
-     completa de más arriba ya corrió con el registro apagado y pasó entera,
-     así que basta con comprobar que las llamadas no revientan. */
+  /* La clave que se publica tiene que ser la anon. La service_role lee y borra
+     todo, y va dentro de una página que cualquiera puede abrir. */
+  const tok = (conf.match(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/) || [])[0];
+  if (tok) {
+    let carga = tok.split('.')[1];
+    while (carga.length % 4) carga += '=';
+    const rol = JSON.parse(Buffer.from(carga, 'base64').toString()).role;
+    comprobar('la clave publicada es anon, no service_role', rol === 'anon', 'rol: ' + rol);
+  }
+
+  /* Lo esencial: SIN RED el juego tiene que seguir. En las pruebas fetch
+     siempre falla, así que este camino es justo el del wifi caído. */
   let reventó = false;
   try {
     R.anotarIntento({ equipo: 'X', reto: 'oro', codigo: 'x = 1', paso: true,
                       pasados: 5, total: 5, puntos: 100, segundos: 42 });
     R.recuperarEquipo();
   } catch (e) { reventó = true; }
-  comprobar('anotar un intento sin configuración no rompe nada', !reventó);
+  comprobar('anotar un intento sin red no rompe nada', !reventó);
 
-  await R.abrirEquipo('Equipo de prueba').then(function (id) {
-    comprobar('dar de alta un equipo sin configuración devuelve nulo', id === null);
-  });
+  const idEquipo = await R.abrirEquipo('Equipo de prueba');
+  comprobar('sin red, el equipo igual recibe su identificador y juega',
+    configurado ? (typeof idEquipo === 'string' && idEquipo.length > 10) : idEquipo === null,
+    String(idEquipo).slice(0, 20));
+
+  if (configurado) {
+    const cola = JSON.parse(J.disco['seccion7-cola-envios'] || '[]');
+    comprobar('lo que no se pudo enviar queda en cola para reintentar',
+      cola.length > 0, cola.length + ' filas esperando');
+  }
 
   /* El esquema y el cliente tienen que hablar de las mismas columnas. */
   const sql = fs.readFileSync(ruta.join(RAIZ, 'herramientas', 'supabase.sql'), 'utf8');

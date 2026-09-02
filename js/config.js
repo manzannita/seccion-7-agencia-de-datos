@@ -20,8 +20,8 @@
    ========================================================================== */
 window.CQ = window.CQ || {};
 window.CQ.config = {
-  URL: "",
-  CLAVE: "",
+  URL: "https://gzepdhrodxylzubahwli.supabase.co",
+  CLAVE: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6ZXBkaHJvZHh5bHp1YmFod2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMDc4MjcsImV4cCI6MjEwMzg4MzgyN30.lv6Mq6HN0_LEw6Sy7gwXFcmcyBGb3nnzH2jYSfURagE",
 
   /* Nombre de la competencia, por si corres varias con la misma base. */
   competencia: "Sección 7"
