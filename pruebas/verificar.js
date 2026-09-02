@@ -583,8 +583,25 @@ async function principal() {
   /* El panel usa la clave que lee todo: no puede publicarse. */
   const flujo = fs.readFileSync(ruta.join(RAIZ, '.github', 'workflows', 'desplegar.yml'), 'utf8');
   comprobar('el despliegue rechaza una clave service_role', /service_role/.test(flujo));
-  comprobar('el despliegue no publica el panel de organizadores',
-    /panel\.html/.test(flujo) && !/cp herramientas/.test(flujo));
+  /* El panel ya se puede publicar porque no lleva claves: entra con usuario y
+     contraseña. Lo que hay que vigilar es justamente eso. */
+  const panel = fs.readFileSync(ruta.join(RAIZ, 'herramientas', 'panel.html'), 'utf8');
+  comprobar('el panel no menciona la clave de administrador',
+    !/service_role/.test(panel));
+  comprobar('el panel entra con usuario y contraseña',
+    /grant_type=password/.test(panel) && /auth\/v1\/token/.test(panel));
+  comprobar('el despliegue rechaza un panel con clave de administrador',
+    /grep -q "service_role" _sitio\/panel/.test(flujo));
+
+  /* La lista blanca: no basta con estar autenticado, hay que estar en ella. */
+  comprobar('leer exige estar en la lista de organizadores',
+    /using \(es_organizador\(\)\)/.test(sql) &&
+    (sql.match(/using \(es_organizador\(\)\)/g) || []).length === 2);
+  comprobar('la lista de organizadores no se puede consultar desde la API',
+    /revoke all on table organizadores from anon, authenticated/i.test(sql));
+  comprobar('la vista respeta las reglas de quien consulta',
+    /security_invoker = true/.test(sql),
+    'sin esto, cualquier registrado vería el marcador');
 
 
   /* --------------------------------------------- 5. teclado ------------- */

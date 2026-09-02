@@ -39,21 +39,23 @@
   <h1>Panel de la competencia</h1>
   <div class="sub">Avance de los equipos, intentos y código enviado.</div>
 
-  <div class="aviso">
-    <strong>Este archivo no se publica.</strong> Usa la clave <code>service_role</code>,
-    que puede leer y borrar todo. Ábrelo desde tu disco y no lo subas a ningún
-    sitio web. La clave se guarda solo en este navegador.
+  <div class="aviso" id="quienSoy">
+    Entra con el correo y la contraseña de tu usuario organizador. Solo pueden
+    leer los correos que estén en la lista <code>organizadores</code> de la base
+    de datos. <strong>Aquí no se usa ninguna clave de administrador.</strong>
   </div>
 
-  <label>URL del proyecto de Supabase</label>
-  <input id="url" placeholder="https://xxxxxxxx.supabase.co" autocomplete="off">
-  <label>Clave <code>service_role</code> (Project Settings → API)</label>
-  <input id="clave" type="password" placeholder="eyJ..." autocomplete="off">
+  <div id="entrada">
+    <label>Correo</label>
+    <input id="correo" type="email" placeholder="tu@correo.com" autocomplete="username">
+    <label>Contraseña</label>
+    <input id="clave" type="password" placeholder="••••••••" autocomplete="current-password">
+  </div>
   <div class="barra">
-    <button id="cargar" class="principal">Cargar</button>
+    <button id="cargar" class="principal">Entrar y cargar</button>
     <button id="auto">Actualizar cada 15 s</button>
     <button id="csv">Descargar CSV de intentos</button>
-    <button id="olvidar">Olvidar la clave</button>
+    <button id="salir">Cerrar sesión</button>
     <span id="estado" class="tenue"></span>
   </div>
 
@@ -61,33 +63,57 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const RECUERDO = "seccion7-panel";
+const SESION = "seccion7-panel-sesion";
 let temporizador = null;
 
-try {
-  const g = JSON.parse(localStorage.getItem(RECUERDO) || "null");
-  if (g) { $("url").value = g.url || ""; $("clave").value = g.clave || ""; }
-} catch (e) {}
+/* Los datos del proyecto son los mismos que usa el juego, y son públicos por
+   diseño: la clave anon solo puede insertar. Lo que da acceso de lectura es
+   haber entrado con un usuario que esté en la lista de organizadores. */
+const PROYECTO = {
+  URL: "https://gzepdhrodxylzubahwli.supabase.co",
+  ANON: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6ZXBkaHJvZHh5bHp1YmFod2xpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgzMDc4MjcsImV4cCI6MjEwMzg4MzgyN30.lv6Mq6HN0_LEw6Sy7gwXFcmcyBGb3nnzH2jYSfURagE"
+};
+let sesion = null;
+try { sesion = JSON.parse(localStorage.getItem(SESION) || "null"); } catch (e) {}
 
-function recordar() {
-  try {
-    localStorage.setItem(RECUERDO, JSON.stringify({ url: $("url").value.trim(), clave: $("clave").value.trim() }));
-  } catch (e) {}
-}
 function escapar(s) {
   return String(s == null ? "" : s).replace(/[&<>"]/g, c =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 }
+
+function entrar() {
+  const correo = $("correo").value.trim(), clave = $("clave").value;
+  if (!correo || !clave) return Promise.reject(new Error("Falta el correo o la contraseña"));
+  return fetch(PROYECTO.URL + "/auth/v1/token?grant_type=password", {
+    method: "POST",
+    headers: { apikey: PROYECTO.ANON, "Content-Type": "application/json" },
+    body: JSON.stringify({ email: correo, password: clave })
+  }).then(r => r.json().then(d => {
+    if (!r.ok) throw new Error(d.error_description || d.msg || ("HTTP " + r.status));
+    sesion = { token: d.access_token, correo: correo, hasta: Date.now() + (d.expires_in || 3600) * 1000 };
+    try { localStorage.setItem(SESION, JSON.stringify(sesion)); } catch (e) {}
+    return sesion;
+  }));
+}
+
+function conSesion() {
+  if (sesion && sesion.token && sesion.hasta > Date.now() + 30000) return Promise.resolve(sesion);
+  return entrar();
+}
+
 function pedir(tabla, consulta) {
-  const base = $("url").value.trim().replace(/\/+$/, "");
-  const clave = $("clave").value.trim();
-  if (!base || !clave) return Promise.reject(new Error("Falta la URL o la clave"));
-  return fetch(base + "/rest/v1/" + tabla + (consulta || ""), {
-    headers: { apikey: clave, Authorization: "Bearer " + clave }
-  }).then(r => {
-    if (!r.ok) return r.text().then(t => { throw new Error("HTTP " + r.status + " — " + t.slice(0, 200)); });
-    return r.json();
-  });
+  return conSesion().then(s =>
+    fetch(PROYECTO.URL + "/rest/v1/" + tabla + (consulta || ""), {
+      headers: { apikey: PROYECTO.ANON, Authorization: "Bearer " + s.token }
+    }).then(r => {
+      if (r.status === 401 || r.status === 403) {
+        return r.text().then(t => {
+          throw new Error("Sin permiso. ¿Está tu correo en la lista de organizadores? — " + t.slice(0, 160));
+        });
+      }
+      if (!r.ok) return r.text().then(t => { throw new Error("HTTP " + r.status + " — " + t.slice(0, 200)); });
+      return r.json();
+    }));
 }
 </script>
 <script>
@@ -172,7 +198,6 @@ function pintar(marcador, intentos) {
 }
 
 function cargar() {
-  recordar();
   $("estado").textContent = "cargando…";
   Promise.all([
     pedir("marcador", "?select=*"),
@@ -180,6 +205,8 @@ function cargar() {
   ]).then(([m, i]) => {
     pintar(m, i);
     $("estado").textContent = "actualizado " + new Date().toLocaleTimeString();
+    $("entrada").style.display = "none";
+    $("quienSoy").innerHTML = "Sesión iniciada como <strong>" + escapar(sesion.correo) + "</strong>";
   }).catch(e => {
     $("estado").innerHTML = "<span class='mal'>" + escapar(e.message) + "</span>";
   });
@@ -196,10 +223,16 @@ $("auto").onclick = function () {
     this.textContent = "Detener actualización";
   }
 };
-$("olvidar").onclick = function () {
-  try { localStorage.removeItem(RECUERDO); } catch (e) {}
+$("salir").onclick = function () {
+  try { localStorage.removeItem(SESION); } catch (e) {}
+  sesion = null;
   $("clave").value = "";
-  $("estado").textContent = "clave olvidada en este navegador";
+  $("entrada").style.display = "";
+  $("quienSoy").textContent = "Sesión cerrada.";
+  $("salida").innerHTML = "";
+  if (temporizador) { clearInterval(temporizador); temporizador = null;
+                      $("auto").textContent = "Actualizar cada 15 s"; }
+  $("estado").textContent = "";
 };
 $("csv").onclick = function () {
   if (!ultimosIntentos.length) { $("estado").textContent = "carga los datos primero"; return; }
@@ -215,7 +248,7 @@ $("csv").onclick = function () {
   a.click();
 };
 
-if ($("url").value && $("clave").value) cargar();
+if (sesion && sesion.hasta > Date.now()) { $("correo").value = sesion.correo || ""; cargar(); }
 </script>
 </body>
 </html>

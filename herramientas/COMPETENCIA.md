@@ -64,12 +64,36 @@ Haz push y en un minuto el sitio queda publicado con el registro activo.
 > `service_role` lee y borra todo. Si te equivocas, el despliegue falla a
 > propósito antes de publicarla.
 
-## 3. El panel
+## 3. Crear tu usuario de organizador
 
-Abre **`herramientas/panel.html`** con doble clic, desde tu disco. Pega la URL
-del proyecto y esta vez sí la clave **`service_role`**.
+El panel entra con correo y contraseña, no con claves. Hay que crear ese
+usuario y ponerlo en la lista blanca.
 
-Verás tres cosas:
+1. En Supabase, **Authentication → Users → Add user → Create new user**.
+   Pon tu correo y una contraseña. Marca *Auto Confirm User* para no tener que
+   confirmar por email.
+2. En **SQL Editor**, mete ese correo en la lista:
+
+   ```sql
+   insert into organizadores (email, nota) values
+     ('tu@correo.com', 'organizadora')
+   on conflict (email) do nothing;
+   ```
+
+   Para añadir a alguien más (AngelPila, por ejemplo), repite los dos pasos con
+   su correo.
+
+3. **Cierra el registro público.** En **Authentication → Providers → Email**,
+   desactiva *Enable Sign Ups*. Sin esto, cualquiera podría crearse una cuenta
+   con la clave del juego. No vería nada —la lista blanca lo impide— pero es
+   una puerta que no tiene por qué estar abierta.
+
+## 4. El panel
+
+Está publicado en
+**https://manzannita.github.io/seccion-7-agencia-de-datos/panel/**
+
+Entra con el correo y la contraseña del paso anterior. Verás tres cosas:
 
 - **Equipos**: quién va ganando, cuántos encargos resolvió, puntos, intentos y
   tiempo.
@@ -80,9 +104,11 @@ Verás tres cosas:
 
 Hay un botón para actualizar cada 15 segundos y otro para bajar todo en CSV.
 
-> **Este archivo no se publica nunca.** Lleva la clave que puede borrar la
-> base. El despliegue está configurado para rechazarlo si alguien lo mueve a
-> una carpeta publicada.
+> **Que el panel sea público no es un descuido.** La página no lleva ninguna
+> clave: solo la misma que ya viaja en el juego, que únicamente puede insertar.
+> Quien la abra sin un usuario de la lista no ve absolutamente nada. La clave
+> `service_role` no se usa en ninguna parte y no debería salir nunca de tu
+> cuenta de Supabase.
 
 ---
 
@@ -119,7 +145,9 @@ clic.
 - [ ] El SQL ejecutado y `rowsecurity = true` en las dos tablas
 - [ ] `js/config.js` con la URL y la clave **anon**, subido
 - [ ] El sitio abre y deja ejecutar código
-- [ ] El panel carga con la clave **service_role**
+- [ ] Tu usuario creado y su correo en la tabla `organizadores`
+- [ ] El registro público de cuentas desactivado
+- [ ] El panel carga con tu correo y contraseña
 - [ ] Jugaste una partida de prueba y aparece en el panel
 - [ ] Borraste esa prueba (`delete from intentos; delete from equipos;`)
 - [ ] La copia local de 49 MB en una USB, por si acaso

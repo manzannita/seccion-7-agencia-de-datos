@@ -7,7 +7,7 @@
 # Qué queda fuera y por qué:
 #   pruebas/    las soluciones de referencia
 #   vendor/     el intérprete de 49 MB (en el sitio se usa el CDN)
-#   herramientas/  utilidades de organización, no hacen falta para jugar
+#   herramientas/  utilidades de organización (salvo el panel, que sí se publica)
 #   sprites/fuente/ y sprites/pen/  material de trabajo del arte
 name: Desplegar el juego
 
@@ -39,6 +39,13 @@ jobs:
           cp sprites/*.png _sitio/sprites/
           cp sprites/LEEME.md _sitio/sprites/ 2>/dev/null || true
 
+          # El panel de organizadores ya no lleva claves: entra con usuario y
+          # contraseña, y solo leen los correos de la lista organizadores. Por
+          # eso se puede publicar. La guardia de más abajo sigue vigilando que
+          # no se cuele ninguna clave de administrador.
+          mkdir -p _sitio/panel
+          cp herramientas/panel.html _sitio/panel/index.html
+
           # que no lo encuentren buscando en Google durante la competencia
           printf 'User-agent: *\nDisallow: /\n' > _sitio/robots.txt
 
@@ -69,8 +76,10 @@ jobs:
               echo "ERROR: hay una clave service_role en el sitio. Usa la clave anon."; exit 1
             fi
           done
-          if [ -e _sitio/panel.html ] || find _sitio -name "panel.html" | grep . ; then
-            echo "ERROR: el panel de organizadores no se publica"; exit 1
+          # El panel se publica, pero jamás con una clave dentro: solo puede
+          # llevar la clave anon, que es la misma que ya viaja en el juego.
+          if grep -q "service_role" _sitio/panel/index.html; then
+            echo "ERROR: el panel menciona service_role"; exit 1
           fi
           echo "Sitio limpio. Archivos:"
           find _sitio -type f | sort

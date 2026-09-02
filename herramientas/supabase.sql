@@ -78,9 +78,56 @@ grant select on table equipos  to service_role;
 grant select on table intentos to service_role;
 
 -- =============================================================================
+-- QUIÉN PUEDE LEER: la lista de organizadores
+--
+-- El panel entra con usuario y contraseña, no con la clave de administrador.
+-- Pero no basta con "estar autenticado": Supabase permite que cualquiera se
+-- registre con la clave pública, y entonces sería un usuario autenticado más.
+-- Por eso leer exige además estar en ESTA lista, que solo se toca desde aquí.
+-- =============================================================================
+create table if not exists organizadores (
+  email  text primary key,
+  nota   text,
+  alta   timestamptz not null default now()
+);
+-- nadie llega a esta tabla desde la API, ni para leerla
+revoke all on table organizadores from anon, authenticated;
+
+-- AGREGA AQUÍ LOS CORREOS DE QUIENES VAN A ENTRAR AL PANEL:
+insert into organizadores (email, nota) values
+  ('cambia@esto.com', 'organizador')
+on conflict (email) do nothing;
+
+-- La comprobación va en una función con permisos propios: si la policy
+-- consultara la tabla directamente, necesitaría dar acceso a la lista, que es
+-- justo lo que no queremos.
+create or replace function es_organizador() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from organizadores
+    where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+  );
+$$;
+grant execute on function es_organizador() to authenticated;
+
+grant select on table equipos  to authenticated;
+grant select on table intentos to authenticated;
+
+drop policy if exists equipos_leer on equipos;
+create policy equipos_leer on equipos
+  for select to authenticated using (es_organizador());
+
+drop policy if exists intentos_leer on intentos;
+create policy intentos_leer on intentos
+  for select to authenticated using (es_organizador());
+
+-- =============================================================================
 -- Vista para el panel: una fila por equipo con lo que interesa de un vistazo.
 -- =============================================================================
-create or replace view marcador as
+-- security_invoker: la vista aplica las reglas de QUIEN consulta. Sin esto
+-- correría con los permisos de su dueño y saltaría la lista de
+-- organizadores, dejando el marcador a la vista de cualquier registrado.
+create or replace view marcador with (security_invoker = true) as
 select
   e.id,
   e.nombre,
@@ -96,8 +143,8 @@ group by e.id, e.nombre, e.creado_en;
 
 -- La vista es SOLO para el panel de organizadores. Si quedara legible por la
 -- clave pública, un equipo vería el marcador entero desde el navegador.
-revoke all on marcador from anon, authenticated;
-grant select on marcador to service_role;
+revoke all on marcador from anon;
+grant select on marcador to authenticated, service_role;
 
 -- =============================================================================
 -- COMPROBACIONES. Las tres deben salir bien o algo quedó mal ejecutado.

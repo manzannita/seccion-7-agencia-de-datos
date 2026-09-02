@@ -75,6 +75,9 @@ Lo importante en dos líneas:
 - **Los equipos escriben pero no leen.** La clave que viaja en la página solo
   puede insertar. Si pudiera leer, un equipo consultaría la base y vería el
   código de sus compañeros.
+- **El panel entra con usuario y contraseña**, y solo leen los correos que
+  estén en una lista blanca. No hay ninguna clave de administrador en el
+  navegador de nadie.
 - **Sin nube el juego funciona igual.** Si no hay configuración, o si se cae la
   red, cada equipo guarda su progreso en su navegador y los envíos pendientes
   esperan en cola. La partida nunca se detiene por un problema de red.
