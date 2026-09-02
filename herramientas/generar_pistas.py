@@ -7,6 +7,7 @@ Genera la ruta física a partir de herramientas/pistas.json.
 Deja tres cosas:
     js/pistas-datos.js        lo que lee la web: TODO CIFRADO
     pistas/carteles.html      los carteles para imprimir, con su QR
+    pistas/donde-va-X.html    una hoja por cartel: donde hay que pegarlo
     herramientas/rutas.txt    el recorrido de cada equipo, para ti
     herramientas/rutas.json   el mismo recorrido, para las pruebas
 
@@ -170,6 +171,59 @@ def codigos_inicio(equipos):
         numero = "".join(secrets.choice("23456789") for _ in range(4))
         usadas[equipo] = "%s-%s" % (palabra, numero)
     return usadas
+
+
+def donde_pegar(cfg, estacion):
+    """La hoja que acompana a un cartel: donde hay que pegarlo.
+
+    Va aparte del cartel a proposito. El cartel no dice de que sitio es (si lo
+    dijera, una foto del cartel revelaria la ubicacion), y esta hoja no dice el
+    reto ni la respuesta. Se juntan solo en las manos de quien los pega.
+
+    Tampoco lleva el QR: si lo llevara, alguien podria escanear la hoja en vez
+    de ir hasta el cartel.
+    """
+    return """<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<title>Dónde va el cartel %s</title>
+<style>
+ @page { size: A4; margin: 18mm; }
+ body { font-family: Georgia, "Times New Roman", serif; color: #0b1020; margin: 0; }
+ .hoja { height: 250mm; display: flex; flex-direction: column;
+         align-items: center; justify-content: center; text-align: center; }
+ .arriba { font-size: 12pt; letter-spacing: .22em; color: #666; }
+ .cual { font-size: 15pt; letter-spacing: .3em; margin: 6mm 0 14mm;
+         border: 2px solid #0b1020; padding: 4mm 14mm; }
+ .cual b { font-size: 40pt; letter-spacing: 0; display: block; margin-top: 2mm; }
+ .etiqueta { font-size: 12pt; letter-spacing: .22em; color: #666; }
+ .lugar { font-size: 30pt; font-weight: bold; line-height: 1.3; margin: 5mm 0 14mm;
+          border-bottom: 3px solid #0b1020; padding-bottom: 6mm; max-width: 150mm; }
+ .notas { text-align: left; font-size: 12pt; line-height: 2; max-width: 125mm;
+          color: #333; }
+ .notas li { margin-bottom: 2mm; }
+ .pie { margin-top: 14mm; font-size: 10pt; color: #777; }
+ @media screen { body { background: #eee; padding: 10mm; }
+                 .hoja { background: #fff; height: auto; padding: 20mm; } }
+</style></head><body>
+  <div class="hoja">
+    <div class="arriba">DÓNDE VA ESTE CARTEL</div>
+    <div class="cual">CARTEL<b>%s</b></div>
+
+    <div class="etiqueta">PÉGALO EN</div>
+    <div class="lugar">%s</div>
+
+    <ul class="notas">
+      <li>Busca el cartel que dice <b>ESTACIÓN %s</b> arriba.</li>
+      <li>Pégalo a la altura de los ojos, donde se vea al llegar.</li>
+      <li>Que no le dé el sol de frente: el reflejo impide escanear.</li>
+      <li>Comprueba que el QR queda liso, sin arrugas ni cinta encima.</li>
+      <li>Escánealo tú una vez para confirmar que abre.</li>
+    </ul>
+
+    <div class="pie">Esta hoja es para ti. No la dejes junto al cartel.</div>
+  </div>
+</body></html>""" % (escapa(estacion["id"]), escapa(estacion["id"]),
+                     escapa(estacion["lugar"]), escapa(estacion["id"]))
 
 
 def hoja_codigos(cfg, recorridos, arranques):
@@ -356,11 +410,19 @@ def main():
               encoding="utf-8") as f:
         f.write(hoja_codigos(cfg, recorridos, arranques))
 
+    # Una hoja por cartel, diciendo donde se pega.
+    for e in estaciones:
+        destino = os.path.join(RAIZ, "pistas", "donde-va-%s.html" % e["id"])
+        with open(destino, "w", encoding="utf-8") as f:
+            f.write(donde_pegar(cfg, e))
+
     print("  js/pistas-datos.js       %d equipos x %d estaciones, todo cifrado"
           % (len(equipos), len(estaciones)))
     print("  pistas/carteles.html     %d carteles para imprimir" % len(estaciones))
     print("  pistas/codigos-arranque.html  los %d codigos, para la organizacion"
           % len(equipos))
+    print("  pistas/donde-va-X.html   %d hojas: que cartel va en que sitio"
+          % len(estaciones))
     print("  herramientas/rutas.txt   los recorridos y las respuestas (no se publica)")
     print()
     if nuevas or codigos_nuevos:

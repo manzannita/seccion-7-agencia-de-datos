@@ -94,7 +94,7 @@ jobs:
             echo "ERROR: el panel menciona service_role"; exit 1
           fi
           # Los carteles y las hojas llevan respuestas y lugares en claro.
-          for impreso in carteles.html codigos-arranque.html; do
+          for impreso in carteles.html codigos-arranque.html "donde-va-*.html"; do
             if find _sitio -name "$impreso" | grep . ; then
               echo "ERROR: $impreso es para imprimir, no para publicar"; exit 1
             fi

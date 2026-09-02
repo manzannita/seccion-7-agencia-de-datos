@@ -61,10 +61,11 @@ def main():
             if codigo.lower() in todo:
                 filtrados.append("el codigo de arranque de %s" % equipo)
 
-    # Los dos archivos que solo se imprimen.
+    # Los archivos que solo se imprimen y nunca se publican.
     for base, _, archivos in os.walk(CARPETA):
         for nombre in archivos:
-            if nombre in ("carteles.html", "codigos-arranque.html"):
+            if (nombre in ("carteles.html", "codigos-arranque.html")
+                    or nombre.startswith("donde-va-")):
                 filtrados.append("%s (es para imprimir)" % nombre)
 
     if filtrados:

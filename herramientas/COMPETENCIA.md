@@ -246,6 +246,7 @@ python herramientas/generar_pistas.py
 | `js/pistas-datos.js` | lo que lee la página, todo cifrado. Se publica |
 | `pistas/carteles.html` | los tres carteles con su QR. **Imprimir y pegar** |
 | `pistas/codigos-arranque.html` | los códigos, una hoja. **Para ti** |
+| `pistas/donde-va-A.html` y sus hermanas | una hoja por cartel diciendo dónde se pega |
 | `herramientas/rutas.txt` | recorridos, respuestas y las direcciones de los QR |
 
 Los dos archivos imprimibles llevan datos que los equipos no deben ver. El
@@ -278,7 +279,11 @@ El campo `cierre` es lo que ven al completar la ruta, debajo de la clave:
 
 ### El día
 
-1. Imprime `carteles.html` y pega cada cartel en su sitio.
+1. Imprime `carteles.html` y las hojas `donde-va-*.html`. Cada hoja dice en
+   qué sitio va su cartel; el cartel lleva la letra grande arriba para que los
+   emparejes. Ninguna de las dos dice el reto ni la respuesta, así que puedes
+   darle el paquete a otra persona para que los pegue sin que se entere de
+   nada. Que se quede las hojas: no se dejan junto al cartel.
 2. Quédate con `codigos-arranque.html`.
 3. A cada equipo le das **solo su código**. Ellos lo escriben en la página y
    ahí les dice dónde ir.
