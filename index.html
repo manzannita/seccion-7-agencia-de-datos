@@ -373,6 +373,12 @@
             </p>
             <p>NOMBRE DEL ESCUADRON:</p>
             <input type="text" id="inNombreEquipo" maxlength="18" placeholder="Los Bytes Locos" autocomplete="off">
+            <div id="puerta">
+              <p>CLAVE DE ACCESO:</p>
+              <input type="text" id="inClave" maxlength="24" placeholder="la que armaron con las pistas"
+                     autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <div id="avisoClave" class="tenue"></div>
+            </div>
             <div class="fila">
               <button id="btnJugar" class="principal">▶ ENTRAR</button>
               <button id="btnContinuar">↺ CONTINUAR</button>
@@ -466,6 +472,9 @@
   <script src="js/mapa.js"></script>
   <script src="js/codigo.js"></script>
   <script src="js/retos.js"></script>
+  <!-- la caceria de codigos QR: hace falta para comprobar la clave de acceso -->
+  <script src="js/pistas-datos.js"></script>
+  <script src="js/pistas.js"></script>
   <script src="js/juego.js"></script>
 </body>
 </html>

@@ -1197,7 +1197,62 @@ function conectar() {
   });
 
   const inNombre = $("inNombreEquipo");
+
+  /* ---------------------- la puerta de la caceria ------------------------
+     Antes de jugar hay que traer la clave que arma la caceria de codigos QR.
+     La clave no esta escrita en ninguna parte del juego: se comprueba
+     intentando abrir un cofre cerrado con ella. Una vez acertada se recuerda
+     en este navegador, para no pedirla otra vez a media competencia.        */
+  const PASE = "seccion7-pase";
+  function yaPaso() {
+    try { return localStorage.getItem(PASE) === "si"; } catch (e) { return false; }
+  }
+  function guardarPase() {
+    try { localStorage.setItem(PASE, "si"); } catch (e) {}
+  }
+  function hayPuerta() {
+    return !!(window.CQ && window.CQ.ruta && window.CQ.ruta.datos &&
+              window.CQ.ruta.datos.acceso);
+  }
+
+  /* Deja pasar y devuelve una promesa. Si no hay caceria montada, no estorba. */
+  function pedirPase() {
+    const campo = $("inClave"), aviso = $("avisoClave");
+    if (!hayPuerta() || yaPaso()) { esconderPuerta(); return Promise.resolve(true); }
+    const texto = ((campo && campo.value) || "").trim();
+    if (!texto) {
+      if (aviso) aviso.textContent = "Falta la clave. Sale de juntar todas las pistas.";
+      return Promise.resolve(false);
+    }
+    if (aviso) aviso.textContent = "Comprobando…";
+    return window.CQ.ruta.claveOk(texto).then(function (vale) {
+      if (aviso) {
+        aviso.textContent = vale ? "" : "Esa clave no es. Les falta alguna pista.";
+      }
+      if (vale) guardarPase();
+      return vale;
+    }).catch(function () {
+      if (aviso) aviso.textContent = "No se pudo comprobar la clave.";
+      return false;
+    });
+  }
+
+  function esconderPuerta() {
+    const bloque = $("puerta");
+    if (bloque && bloque.style) bloque.style.display = "none";
+  }
+  if (yaPaso() || !hayPuerta()) esconderPuerta();
+
   $("btnJugar").addEventListener("click", function () {
+    const boton = $("btnJugar");
+    boton.disabled = true;
+    pedirPase().then(function (vale) {
+      boton.disabled = false;
+      if (vale) entrar();
+    });
+  });
+
+  function entrar() {
     estado.equipo = ((inNombre.value || "").trim() || "Escuadrón sin nombre").slice(0, 18);
     estado.puntos = 0; estado.xp = 0; estado.resueltos = {}; estado.pistas = {};
     estado.intentos = {}; estado.borradores = {}; estado.segundos = 0;
@@ -1207,16 +1262,32 @@ function conectar() {
     REG.abrirEquipo(estado.equipo);
     SAB.empezarDesdeAhora();
     empezar(true);
-  });
+  }
+
+  const inClave = $("inClave");
+  if (inClave) {
+    inClave.addEventListener("keydown", function (e) {
+      e.stopPropagation();
+      if (e.key === "Enter") { e.preventDefault(); $("btnJugar").click(); }
+    });
+  }
+
   inNombre.addEventListener("keydown", function (e) {
     e.stopPropagation();
     if (e.key === "Enter") { e.preventDefault(); $("btnJugar").click(); }
   });
 
   $("btnContinuar").addEventListener("click", function () {
-    if (!cargar()) { inNombre.placeholder = "No hay partida guardada"; return; }
-    REG.recuperarEquipo();
-    empezar(false);
+    const boton = $("btnContinuar");
+    boton.disabled = true;
+    /* Continuar tambien pasa por la puerta: si no, seria la puerta de atras. */
+    pedirPase().then(function (vale) {
+      boton.disabled = false;
+      if (!vale) return;
+      if (!cargar()) { inNombre.placeholder = "No hay partida guardada"; return; }
+      REG.recuperarEquipo();
+      empezar(false);
+    });
   });
 
   $("btnEnviar").addEventListener("click", enviar);

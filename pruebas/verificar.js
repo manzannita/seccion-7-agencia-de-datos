@@ -74,6 +74,14 @@ const SOLUCIONES = {
     '    return [{"area": a, "total": conteo[a]} for a in sorted(conteo)]\n'
 };
 
+/* PBKDF2 tarda de verdad, y aqui setTimeout esta comprimido a 40 ms, asi que
+   esperar por reloj no sirve: se espera a que pase algo, o se agota el plazo. */
+async function hasta(cond, ms) {
+  const fin = Date.now() + (ms || 4000);
+  while (!cond() && Date.now() < fin) await new Promise(r => setImmediate(r));
+  return cond();
+}
+
 async function principal() {
   const J = arrancar();
   const { S7, CQ, JUEGO, el, tick, tecla, pasarDialogo, esperar } = J;
@@ -316,10 +324,44 @@ async function principal() {
       !conPlantilla.resultados || conPlantilla.resultados.filter(x => x.paso).length < casos.length);
   }
 
+  /* ------------------------- 3.5 la puerta de la caceria ---------------- */
+  /* Sin la clave que arma la caceria de codigos QR no se entra al juego.
+     La clave no esta en el juego: se saca de herramientas/pistas.json, que
+     nunca se publica. */
+  titulo('LA PUERTA DE LA CACERIA');
+  const hayPuerta = !!(window.CQ && window.CQ.ruta && window.CQ.ruta.datos &&
+                       window.CQ.ruta.datos.acceso);
+  comprobar('el juego carga la puerta de la caceria', hayPuerta);
+  if (hayPuerta) {
+    const cfg = JSON.parse(
+      require('fs').readFileSync(require('path').join(__dirname, '..',
+        'herramientas', 'pistas.json'), 'utf8'));
+    const claveBuena = cfg.estaciones.map(e => e.fragmento).join('');
+
+    el('inNombreEquipo').value = 'Los Bytes Locos';
+    el('inClave').value = claveBuena.slice(0, -1) + 'Z';
+    el('btnJugar').disparar('click');
+    await hasta(() => !/Comprobando/.test(el('avisoClave').textContent));
+    comprobar('con la clave equivocada no se entra', !S7.estado.equipo);
+    comprobar('y lo dice', /no es/.test(el('avisoClave').textContent),
+      el('avisoClave').textContent);
+
+    el('inClave').value = '';
+    el('btnJugar').disparar('click');
+    await hasta(() => !el('btnJugar').disabled);
+    comprobar('sin clave tampoco se entra', !S7.estado.equipo);
+
+    el('inClave').value = claveBuena;
+    el('btnJugar').disparar('click');
+    await hasta(() => !!S7.estado.equipo);
+    comprobar('con la clave correcta se entra', S7.estado.equipo === 'Los Bytes Locos');
+  }
+
   /* ------------------------------------- 4. una partida completa -------- */
   titulo('PARTIDA COMPLETA');
   el('inNombreEquipo').value = 'Los Bytes Locos';
   el('btnJugar').disparar('click');
+  await hasta(() => !!S7.estado.equipo);
   comprobar('arranca con el nombre del escuadrón', S7.estado.equipo === 'Los Bytes Locos');
   comprobar('la directora da la bienvenida', /Vega/.test(el('dlgNombre').textContent),
     el('dlgNombre').textContent);
