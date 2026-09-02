@@ -702,6 +702,12 @@ async function principal() {
     /La cadena guardada no sirve/.test(aplicador) && /os\.remove\(GUARDADO\)/.test(aplicador));
   comprobar('  avisa de que lo pegado no se ve',
     /NO se vera en pantalla/.test(aplicador));
+  /* La cadena de Supabase trae [YOUR-PASSWORD] como hueco. Sustituirlo a mano
+     es donde más gente se equivoca, y una contraseña con @ o # rompe el URI. */
+  comprobar('  rellena solo el hueco de la contraseña',
+    /\[YOUR-PASSWORD\]|"\[" in cad/.test(aplicador) && /re\.sub/.test(aplicador));
+  comprobar('  y la codifica, para que @ o # no rompan la cadena',
+    /quote\(pwd, safe=""\)/.test(aplicador));
 
 
   /* --------------------------------------------- 5. teclado ------------- */

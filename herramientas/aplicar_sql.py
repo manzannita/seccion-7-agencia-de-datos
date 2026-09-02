@@ -20,7 +20,7 @@ import getpass
 import os
 import re
 import sys
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, quote
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GUARDADO = os.path.join(RAIZ, "herramientas", ".conexion")
@@ -82,6 +82,18 @@ def pedir_cadena():
     print("")
     for intento in range(3):
         cad = getpass.getpass("  Pega la cadena y pulsa Enter: ").strip()
+
+        # La cadena que da Supabase trae [YOUR-PASSWORD] como hueco y hay que
+        # sustituirlo a mano. Es donde mas gente se equivoca, asi que se pide
+        # la contrasena aparte y se pone aqui. De paso se codifica, que una
+        # contrasena con @ o # rompe el URI sin decir por que.
+        if "[" in cad and "]" in cad:
+            print("")
+            print("  Esa cadena trae un hueco para la contrasena. Dimela y la pongo yo.")
+            print("  Si no la recuerdas: Project Settings -> Database -> Reset database password.")
+            pwd = getpass.getpass("  Contrasena de la base de datos: ").strip()
+            if pwd:
+                cad = re.sub(r"\[[^\]]*\]", quote(pwd, safe=""), cad, count=1)
         motivo = revisar(cad)
         if motivo is None:
             return cad

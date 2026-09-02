@@ -60,6 +60,21 @@ correr las veces que haga falta sin romper ni borrar nada.
 > pantalla. Si algún día cambias la contraseña, borra ese archivo y volverá a
 > preguntarla.
 
+> **¿Cuál contraseña?** Supabase maneja cuatro credenciales distintas y es
+> fácil confundirlas:
+>
+> | Cuál | Para qué |
+> |---|---|
+> | La de tu cuenta | Entrar a supabase.com |
+> | **La de la base de datos** | **La cadena de conexión, esta es** |
+> | Claves `anon` / `service_role` | La API. Son claves, no contraseñas |
+> | Usuario organizador | Entrar al panel |
+>
+> La de la base la inventaste al crear el proyecto y solo se muestra una vez.
+> Si no la recuerdas, se cambia en **Project Settings → Database → Reset
+> database password**. El script rellena solo el hueco `[YOUR-PASSWORD]` de la
+> cadena: basta con darle la contraseña cuando la pida.
+
 ## 2. Conectar el juego
 
 En Supabase, **Project Settings → API**. Copia dos cosas:
