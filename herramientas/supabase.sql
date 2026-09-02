@@ -78,6 +78,70 @@ grant select on table equipos  to service_role;
 grant select on table intentos to service_role;
 
 -- =============================================================================
+-- SABOTAJES: lo que un equipo puede lanzarle a otro
+--
+-- Aquí se abre una rendija en la regla de "escribir pero no leer", y conviene
+-- ver exactamente cuánto: los equipos pasan a poder leer la tabla `equipos`
+-- (solo id, nombre y hora de alta) y la de sabotajes. El código enviado sigue
+-- en `intentos`, y esa NO se abre. Nadie ve el trabajo de nadie.
+-- =============================================================================
+create table if not exists sabotajes (
+  id         bigserial primary key,
+  de_equipo  uuid not null references equipos(id) on delete cascade,
+  de_nombre  text not null,
+  a_equipo   uuid not null references equipos(id) on delete cascade,
+  tipo       text not null,
+  creado_en  timestamptz not null default now()
+);
+create index if not exists sabotajes_destino on sabotajes (a_equipo, creado_en);
+
+alter table sabotajes enable row level security;
+
+-- EL SERVIDOR COMPRUEBA QUE EL ATAQUE ESTÉ GANADO.
+-- Si esto lo decidiera el navegador, bastaría con abrir las herramientas de
+-- desarrollo para tener sabotajes infinitos. La regla: solo se pueden enviar
+-- tantos como encargos distintos haya resuelto el equipo.
+create or replace function sabotaje_ganado() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  ganados integer;
+  usados  integer;
+begin
+  select count(distinct reto) into ganados
+    from intentos where equipo_id = new.de_equipo and paso;
+  select count(*) into usados
+    from sabotajes where de_equipo = new.de_equipo;
+  if usados >= ganados then
+    raise exception 'Sin sabotajes disponibles: resueltos %, ya enviados %', ganados, usados;
+  end if;
+  if new.de_equipo = new.a_equipo then
+    raise exception 'Un equipo no puede sabotearse a si mismo';
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists sabotajes_solo_ganados on sabotajes;
+create trigger sabotajes_solo_ganados before insert on sabotajes
+  for each row execute function sabotaje_ganado();
+
+-- Los equipos pueden lanzar y ver los ataques (quién ataca a quién es parte
+-- del juego). La tabla equipos se abre solo para poder elegir objetivo: ahí
+-- no hay más que nombres.
+revoke all on table sabotajes from anon, authenticated;
+grant select, insert on table sabotajes to anon;
+grant usage on sequence sabotajes_id_seq to anon;
+grant select on table equipos to anon;
+grant select on table sabotajes to authenticated;
+
+drop policy if exists sabotajes_ver on sabotajes;
+create policy sabotajes_ver on sabotajes for select to anon using (true);
+drop policy if exists sabotajes_lanzar on sabotajes;
+create policy sabotajes_lanzar on sabotajes for insert to anon with check (true);
+
+drop policy if exists equipos_nombres on equipos;
+create policy equipos_nombres on equipos for select to anon using (true);
+
+-- =============================================================================
 -- QUIÉN PUEDE LEER: la lista de organizadores
 --
 -- El panel entra con usuario y contraseña, no con la clave de administrador.

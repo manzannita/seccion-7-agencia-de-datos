@@ -547,11 +547,20 @@ async function principal() {
   comprobar('el esquema y el cliente usan las mismas columnas', faltantes.length === 0,
     faltantes.length ? 'faltan: ' + faltantes.join(', ') : columnas.length + ' columnas');
 
-  /* La regla de seguridad: los equipos escriben, no leen. */
-  comprobar('el esquema NO da permiso de lectura a los equipos',
-    !/for\s+select\s+to\s+anon/i.test(sql), 'solo hay políticas de insert');
-  comprobar('las dos tablas tienen seguridad por fila activada',
-    (sql.match(/enable row level security/gi) || []).length === 2);
+  /* LA REGLA QUE IMPORTA, y que el sabotaje no puede romper: el código que
+     escriben los equipos vive en `intentos`, y esa tabla no se lee jamás
+     desde el juego. Los nombres de equipo y los ataques sí, porque hacen
+     falta para elegir objetivo y para recibir el estorbo. */
+  comprobar('la tabla del código NUNCA se abre a los equipos',
+    !/grant[^;]*select[^;]*on table intentos[^;]*to anon/i.test(sql) &&
+    !/policy[^;]*on intentos[\s\S]{0,80}for select to anon/i.test(sql),
+    'intentos queda cerrada');
+  comprobar('  y lo que sí se abre son solo nombres y ataques',
+    /grant select on table equipos to anon/i.test(sql) &&
+    /grant select, insert on table sabotajes to anon/i.test(sql));
+  comprobar('las tres tablas tienen seguridad por fila activada',
+    (sql.match(/enable row level security/gi) || []).length === 3,
+    (sql.match(/enable row level security/gi) || []).length + ' tablas');
   comprobar('los privilegios son explícitos, no heredados de la configuración',
     /grant insert on table equipos/i.test(sql) && /grant insert on table intentos/i.test(sql));
   /* Quitar permisos de uno en uno no basta: Supabase concede un paquete que
@@ -565,10 +574,12 @@ async function principal() {
   /* La prueba tiene que mirar A QUIÉN se concede: el panel sí necesita leer,
      los equipos no. Sin el rol en la comprobación, cualquier permiso nuevo
      para el panel la haría fallar sin motivo. */
-  const aAnon = (sql.match(/grant\s+[a-z, ]+on table \w+\s+to anon/gi) || []);
-  comprobar('  a los equipos solo se les devuelve INSERT',
-    aAnon.length === 2 && aAnon.every(g => /grant\s+insert\s/i.test(g)),
-    aAnon.join(' · ') || 'ninguno');
+  const aAnon = (sql.match(/grant\s+[a-z, ]+on table (\w+)\s+to anon/gi) || []);
+  const conLectura = aAnon.filter(g => /select/i.test(g))
+                          .map(g => (g.match(/on table (\w+)/i) || [])[1]);
+  comprobar('  ninguna concesión de lectura toca la tabla del código',
+    conLectura.indexOf('intentos') < 0,
+    'con lectura: ' + (conLectura.join(', ') || 'ninguna'));
   comprobar('la vista del marcador no queda legible para los equipos',
     /revoke all on marcador from anon/i.test(sql));
   /* Con "Automatically expose new tables" desmarcada, Supabase no concede
@@ -602,6 +613,44 @@ async function principal() {
   comprobar('la vista respeta las reglas de quien consulta',
     /security_invoker = true/.test(sql),
     'sin esto, cualquier registrado vería el marcador');
+
+
+  /* ------------------------------ 4e. sabotajes ------------------------- */
+  titulo('SABOTAJES');
+
+  const SB = CQ.sabotaje;
+  comprobar('hay catálogo de sabotajes', SB.CATALOGO.length >= 3,
+    SB.CATALOGO.map(o => o.tipo).join(', '));
+
+  /* La regla de diseño: estorban el recorrido, no el trabajo. Si algún efecto
+     tocara el editor o el código, un equipo podría perder veinte minutos de
+     trabajo por un ataque, y eso no es competir. */
+  const juego = fs.readFileSync(ruta.join(RAIZ, 'js', 'juego.js'), 'utf8');
+  const efectos = SB.CATALOGO.map(o => o.tipo);
+  comprobar('los efectos solo estorban el mundo, no el editor',
+    efectos.every(t => ['apagon', 'compuertas', 'interferencia'].indexOf(t) >= 0),
+    efectos.join(', '));
+  comprobar('  ningún efecto toca el editor ni el código escrito',
+    !/estorbo[\s\S]{0,200}editor\.(poner|leer)/.test(juego) &&
+    !/sabotajeActivo\(\)[\s\S]{0,120}borradores/.test(juego));
+
+  /* Quién cuenta los ataques disponibles: el servidor. Si lo decidiera el
+     navegador, bastarían las herramientas de desarrollo para tener infinitos. */
+  comprobar('el servidor comprueba que el sabotaje esté ganado',
+    /create trigger sabotajes_solo_ganados/i.test(sql) &&
+    /Sin sabotajes disponibles/i.test(sql));
+  comprobar('  y prohíbe sabotearse a uno mismo',
+    /no puede sabotearse a si mismo/i.test(sql));
+
+  /* Sin conexión, el sabotaje se apaga y el juego sigue igual. */
+  let rompió = false;
+  try {
+    const lista = await SB.equipos('x');
+    const n = await SB.disponibles('x', 3);
+    comprobar('sin red, el sabotaje no rompe el juego',
+      Array.isArray(lista) && lista.length === 0 && n === 0);
+  } catch (e) { rompió = true; }
+  comprobar('  y no lanza excepciones', !rompió);
 
 
   /* --------------------------------------------- 5. teclado ------------- */

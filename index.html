@@ -238,6 +238,32 @@
   }
   #resumenTareas{margin-top:calc(var(--u)*3); font-size:var(--texto)}
 
+  /* ---------------------------- sabotaje ------------------------------ */
+  #estorbo{
+    position:absolute; right:calc(var(--u)*4); top:calc(var(--u)*22);
+    font-size:calc(var(--u)*4.5); color:var(--rojo);
+    background:rgba(11,16,32,.92); border:calc(var(--u)*1) solid var(--rojo);
+    padding:calc(var(--u)*2) calc(var(--u)*3); display:none;
+  }
+  #estorbo.visible{display:block; animation:pulso 1s ease-in-out infinite}
+  @keyframes pulso{50%{opacity:.55}}
+
+  #zonaSabotaje{margin-top:calc(var(--u)*5); border-top:calc(var(--u)*1) solid var(--linea);
+                padding-top:calc(var(--u)*3)}
+  #zonaSabotaje h2{color:var(--rojo)}
+  .sabOpcion, .sabEquipo{
+    display:inline-block; margin:0 calc(var(--u)*2) calc(var(--u)*2) 0;
+    background:#070b14; border:calc(var(--u)*1) solid var(--linea);
+    padding:calc(var(--u)*2) calc(var(--u)*3); cursor:pointer;
+    font-family:var(--pixel); font-size:calc(var(--texto)*.9); color:var(--tinta);
+  }
+  .sabOpcion:hover, .sabEquipo:hover{border-color:var(--rojo)}
+  .sabOpcion.elegida{border-color:var(--rojo); background:#2a1520; color:var(--rojo)}
+  .sabOpcion small, .sabEquipo small{display:block; color:#7c8fb0;
+                                     font-size:calc(var(--texto)*.75); margin-top:calc(var(--u)*1)}
+  #sabotajeEstado{margin-bottom:calc(var(--u)*2); font-size:var(--texto)}
+  #sabotajeAviso{margin-top:calc(var(--u)*2); font-size:var(--texto); min-height:1.6em}
+
   /* ---------------------------- editor ------------------------------- */
   #editorCaja{
     display:flex; background:#070b14; border:calc(var(--u)*1) solid var(--linea);
@@ -310,6 +336,7 @@
         </div>
 
         <div id="logro"></div>
+        <div id="estorbo"></div>
 
         <div id="sala"></div>
         <div id="aviso">[E] Hablar</div>
@@ -354,6 +381,17 @@
                su problema. Con las cinco se abre la compuerta del Núcleo.</p>
             <div id="listaTareas"></div>
             <div id="resumenTareas" class="tenue"></div>
+
+            <div id="zonaSabotaje">
+              <h2>SABOTAJE</h2>
+              <p class="tenue">Cada encargo resuelto te da un sabotaje. Estorban
+                 el recorrido del rival unos segundos; nunca tocan su código.</p>
+              <div id="sabotajeEstado" class="tenue"></div>
+              <div id="sabotajeCatalogo"></div>
+              <div id="sabotajeEquipos"></div>
+              <div id="sabotajeAviso"></div>
+            </div>
+
             <div class="fila">
               <button id="btnCerrarTareas">✕ VOLVER AL JUEGO</button>
             </div>
@@ -411,6 +449,7 @@
 
   <script src="js/config.js"></script>
   <script src="js/registro.js"></script>
+  <script src="js/sabotaje.js"></script>
   <script src="js/arte.js"></script>
   <script src="js/mapa.js"></script>
   <script src="js/codigo.js"></script>

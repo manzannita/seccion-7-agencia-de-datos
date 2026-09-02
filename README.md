@@ -82,6 +82,17 @@ Lo importante en dos líneas:
   red, cada equipo guarda su progreso en su navegador y los envíos pendientes
   esperan en cola. La partida nunca se detiene por un problema de red.
 
+## Sabotajes entre equipos
+
+Cada encargo resuelto da un sabotaje para lanzarle a otro equipo: apagón,
+compuertas trabadas o caminar despacio. **Todos cuestan segundos de recorrido y
+ninguno toca el editor** — perder trabajo por un ataque no sería competir.
+
+Los sabotajes disponibles los cuenta **el servidor**, no el navegador: hay un
+disparador en la base que comprueba cuántos encargos resolvió el equipo.
+
+Detalles y cómo apagarlos en `herramientas/COMPETENCIA.md`.
+
 ## La lista de encargos
 
 Lo que dice la directora al empezar no alcanza: son siete salas y cinco

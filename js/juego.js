@@ -8,6 +8,7 @@
 "use strict";
 
 const A = window.CQ.arte, M = window.CQ.mapa, EJEC = window.CQ.codigo;
+const SAB = window.CQ.sabotaje || { activo: function () { return false; }, recibidos: function () { return Promise.resolve([]); }, equipos: function () { return Promise.resolve([]); }, disponibles: function () { return Promise.resolve(0); }, CATALOGO: [], buscar: function () { return null; }, empezarDesdeAhora: function () {} };
 const REG = window.CQ.registro || { anotarIntento: function () {}, abrirEquipo: function () { return Promise.resolve(null); }, recuperarEquipo: function () { return null; }, activo: function () { return false; } };
 const S = A.SUELO, O = A.OBJETO;
 
@@ -278,6 +279,27 @@ function dibujarEscena() {
 
   brilloCompuerta();
 
+  const est = sabotajeActivo();
+  if (est && est.tipo === "apagon") {
+    /* Se ve poco, pero se ve: dejar la pantalla completamente negra sería
+       injugable, y la idea es estorbar, no bloquear. */
+    const px0 = Math.round(jugador.x - cam.x), py0 = Math.round(jugador.y - cam.y) - 8;
+    const halo = 46 + Math.sin(tiempoTotal * 5) * 2;
+    const g = ctx.createRadialGradient(px0, py0, halo * 0.35, px0, py0, halo);
+    g.addColorStop(0, "rgba(3,5,12,0)");
+    g.addColorStop(1, "rgba(3,5,12,0.93)");
+    ctx.fillStyle = "rgba(3,5,12,0.93)";
+    ctx.fillRect(0, 0, VW, VH);
+    ctx.globalCompositeOperation = "destination-out";
+    const h = ctx.createRadialGradient(px0, py0, 0, px0, py0, halo);
+    h.addColorStop(0, "rgba(0,0,0,1)");
+    h.addColorStop(0.65, "rgba(0,0,0,0.85)");
+    h.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = h;
+    ctx.fillRect(px0 - halo, py0 - halo, halo * 2, halo * 2);
+    ctx.globalCompositeOperation = "source-over";
+  }
+
   /* viñeta: el edificio se siente cerrado y la atención va al centro */
   const g = ctx.createRadialGradient(VW / 2, VH / 2, VH * 0.33, VW / 2, VH / 2, VH * 0.95);
   g.addColorStop(0, "rgba(0,0,0,0)");
@@ -290,8 +312,11 @@ function dibujarEscena() {
 function libre(cx, cy) {
   const w = 5, h = 3;
   const puntos = [[cx - w, cy - h], [cx + w, cy - h], [cx - w, cy + h], [cx + w, cy + h]];
+  const trabadas = !!(sabotajeActivo() && sabotajeActivo().tipo === "compuertas");
   for (let i = 0; i < puntos.length; i++) {
-    if (M.solido(Math.floor(puntos[i][0] / T), Math.floor(puntos[i][1] / T))) return false;
+    const tx = Math.floor(puntos[i][0] / T), ty = Math.floor(puntos[i][1] / T);
+    if (M.solido(tx, ty)) return false;
+    if (trabadas && M.suelo_en(tx, ty) === S.UMBRAL) return false;
   }
   for (let i = 0; i < npcs.length; i++) {
     const n = npcs[i];
@@ -314,13 +339,15 @@ function mover(dt) {
   if (vy < 0) jugador.dir = "up"; else if (vy > 0) jugador.dir = "down";
   if (vx < 0) jugador.dir = "left"; else if (vx > 0) jugador.dir = "right";
 
-  const nx = jugador.x + vx * VEL * dt, ny = jugador.y + vy * VEL * dt;
+  const e = sabotajeActivo();
+  const vel = VEL * (e && e.tipo === "interferencia" ? 0.5 : 1);
+  const nx = jugador.x + vx * vel * dt, ny = jugador.y + vy * vel * dt;
   if (vx && libre(nx, jugador.y)) jugador.x = nx;
   if (vy && libre(jugador.x, ny)) jugador.y = ny;
 
   if (jugador.mov) {
     /* el ciclo son 4 tiempos y avanza 32 px: atado a VEL, los pies no patinan */
-    jugador.paso += dt * (VEL * 4 / 32);
+    jugador.paso += dt * (vel * 4 / 32);
     acumPaso += dt;
     if (acumPaso > 0.3) { acumPaso = 0; sfx.paso(); }
   } else { jugador.paso = 0; }
@@ -418,6 +445,39 @@ function animarDialogo(dt) {
   dlg.completo = dlg.escrito >= linea.length;
   elTexto.textContent = linea.slice(0, dlg.escrito);
   elSig.textContent = dlg.completo ? (dlg.i < dlg.lineas.length - 1 ? "▼ [E]" : "✕ [E]") : "";
+}
+
+/* ------------------------------- sabotajes -------------------------------
+   Un equipo puede lanzarle a otro un estorbo con fecha de caducidad. Todos
+   cuestan segundos de recorrido; ninguno toca el editor ni el código escrito.
+   Se aplican solo mientras se camina: si el ataque llega con la pantalla del
+   encargo abierta, espera a que salgan. Robarle tiempo de teclado a alguien
+   que está programando sería castigar el trabajo, no la competencia. */
+let estorbo = null;         /* { tipo, hasta, de } */
+
+function sabotajeActivo() {
+  if (estorbo && tiempoTotal < estorbo.hasta) return estorbo;
+  if (estorbo) { estorbo = null; actualizarHUD(); }
+  return null;
+}
+function aplicarSabotaje(fila) {
+  const def = SAB.buscar(fila.tipo);
+  if (!def) return;
+  estorbo = { tipo: fila.tipo, hasta: tiempoTotal + def.segundos, de: fila.de_nombre };
+  anunciar(mayus(def.nombre) + "  ·  " + pixel(fila.de_nombre || "alguien"), true);
+  sfx.mal();
+}
+let proximaConsulta = 0;
+function vigilarSabotajes(dt) {
+  if (!SAB.activo() || !REG.equipo()) return;
+  if (tiempoTotal < proximaConsulta) return;
+  proximaConsulta = tiempoTotal + 8;
+  SAB.recibidos(REG.equipo()).then(function (filas) {
+    filas.forEach(function (f, i) {
+      /* si llegan varios juntos se encadenan, no se pisan */
+      setTimeout(function () { aplicarSabotaje(f); }, i * 1500);
+    });
+  });
 }
 
 /* -------------------------- avisos flotantes -----------------------------
@@ -884,11 +944,72 @@ function pintarTareas() {
     (sig ? " &nbsp;·&nbsp; faltan <b>" + (sig.xp - estado.xp) + " XP</b> para " +
            escapar(pixel(sig.nombre)) : " &nbsp;·&nbsp; rango maximo");
 }
+/* ------------------------- lanzar un sabotaje ----------------------------
+   Vive dentro del panel de encargos: es el sitio donde el equipo ya mira su
+   avance, y así no hay una pantalla más que aprender. */
+let sabElegido = null;
+function pintarSabotaje() {
+  const zona = $("zonaSabotaje");
+  if (!zona) return;
+  if (!SAB.activo()) { zona.style.display = "none"; return; }
+  zona.style.display = "";
+
+  const cat = $("sabotajeCatalogo");
+  cat.innerHTML = SAB.CATALOGO.map(function (o) {
+    return "<span class='sabOpcion" + (sabElegido === o.tipo ? " elegida" : "") +
+      "' data-tipo='" + o.tipo + "'>" + escapar(mayus(o.nombre)) +
+      "<small>" + escapar(o.descripcion) + " · " + o.segundos + "s</small></span>";
+  }).join("");
+  Array.prototype.forEach.call(cat.querySelectorAll(".sabOpcion"), function (b) {
+    b.onclick = function () { sabElegido = b.getAttribute("data-tipo"); pintarSabotaje(); };
+  });
+
+  SAB.disponibles(REG.equipo(), credenciales()).then(function (n) {
+    $("sabotajeEstado").innerHTML = n > 0
+      ? "Tienes <b class='ok'>" + n + "</b> sabotaje(s) por lanzar."
+      : "<span class='tenue'>Todavía no tienes ninguno. Resuelve un encargo.</span>";
+    const eq = $("sabotajeEquipos");
+    if (n <= 0 || !sabElegido) {
+      eq.innerHTML = sabElegido ? "" :
+        "<span class='tenue'>Elige arriba qué quieres lanzar.</span>";
+      return;
+    }
+    SAB.equipos(REG.equipo()).then(function (lista) {
+      eq.innerHTML = lista.length
+        ? "<p class='tenue'>¿A quién?</p>" + lista.map(function (e) {
+            return "<span class='sabEquipo' data-id='" + escapar(e.id) + "'>" +
+                   escapar(pixel(e.nombre)) + "</span>";
+          }).join("")
+        : "<span class='tenue'>No hay otros equipos jugando todavía.</span>";
+      Array.prototype.forEach.call(eq.querySelectorAll(".sabEquipo"), function (b) {
+        b.onclick = function () {
+          const av = $("sabotajeAviso");
+          av.className = "tenue"; av.textContent = "enviando…";
+          SAB.lanzar(REG.equipo(), estado.equipo, b.getAttribute("data-id"), sabElegido)
+            .then(function () {
+              av.className = "ok";
+              av.textContent = "Lanzado contra " + b.textContent + ".";
+              sabElegido = null;
+              sfx.ok();
+              pintarSabotaje();
+            })
+            .catch(function (e) {
+              av.className = "mal";
+              av.textContent = e.message;
+              pintarSabotaje();
+            });
+        };
+      });
+    });
+  });
+}
+
 let modoPrevio = "juego";
 function abrirTareas() {
   if (modo === "reto" || modo === "final" || modo === "inicio") return;
   modoPrevio = modo;
   pintarTareas();
+  pintarSabotaje();
   $("pTareas").classList.add("visible");
   modo = "tareas";
 }
@@ -923,6 +1044,17 @@ function actualizarHUD() {
   $("puntos").textContent = estado.puntos + " PTS";
   const m = Math.floor(estado.segundos / 60), s = Math.floor(estado.segundos % 60);
   $("tiempo").textContent = (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+
+  const e = estorbo && tiempoTotal < estorbo.hasta ? estorbo : null;
+  const av = $("estorbo");
+  if (av) {
+    if (e) {
+      const def = SAB.buscar(e.tipo);
+      av.textContent = mayus(def ? def.nombre : e.tipo) + "  " +
+                       Math.ceil(e.hasta - tiempoTotal) + "s";
+      av.className = "visible";
+    } else av.className = "";
+  }
 }
 
 /* ----------------------- escala y pantalla completa ----------------------- */
@@ -1009,7 +1141,7 @@ function bucle(t) {
   ultimo = t;
   tiempoTotal += dt;
 
-  if (modo === "juego") { estado.segundos += dt; mover(dt); vigilarAviso(); vigilarSala(); }
+  if (modo === "juego") { estado.segundos += dt; mover(dt); vigilarAviso(); vigilarSala(); vigilarSabotajes(dt); }
   else if (modo === "dialogo") { estado.segundos += dt; animarDialogo(dt); }
   else if (modo === "reto" || modo === "tareas") { estado.segundos += dt; }
   moverAvisos();
@@ -1063,6 +1195,7 @@ function conectar() {
     estado.vioIntro = false; estado.terminado = false;
     M.construir(); colocarEntidades();
     REG.abrirEquipo(estado.equipo);
+    SAB.empezarDesdeAhora();
     empezar(true);
   });
   inNombre.addEventListener("keydown", function (e) {

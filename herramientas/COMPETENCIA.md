@@ -112,6 +112,50 @@ Hay un botón para actualizar cada 15 segundos y otro para bajar todo en CSV.
 
 ---
 
+## Sabotajes
+
+Cada encargo resuelto le da al equipo **un sabotaje** para lanzarle a otro. Se
+lanza desde el panel de encargos (`TAB`), eligiendo qué y a quién.
+
+| Sabotaje | Qué hace | Dura |
+|---|---|---|
+| Apagón de sector | Se va la luz, solo se ve alrededor del personaje | 20 s |
+| Compuertas trabadas | No se puede pasar de una sala a otra | 25 s |
+| Interferencia | El personaje camina a la mitad de velocidad | 30 s |
+
+**Todos cuestan segundos de recorrido, ninguno toca el editor.** Es la regla de
+diseño más importante de esta parte: si un ataque estropeara el código que un
+equipo lleva veinte minutos escribiendo, eso no sería competir. Y si el ataque
+llega mientras están en la pantalla de un encargo, espera a que salgan.
+
+**Quién cuenta los sabotajes disponibles es el servidor.** El navegador muestra
+un número, pero la base de datos tiene un disparador que comprueba cuántos
+encargos distintos resolvió el equipo. Cambiar ese número desde las
+herramientas de desarrollo no sirve de nada: el envío se rechaza.
+
+### Qué se abrió para que esto funcione
+
+Hasta aquí los equipos podían escribir pero no leer. El sabotaje obliga a abrir
+una rendija, y conviene saber exactamente cuánta:
+
+| Tabla | Los equipos pueden |
+|---|---|
+| `intentos` (el código) | **nada**, sigue cerrada |
+| `equipos` | leer, pero ahí solo hay nombres |
+| `sabotajes` | leer y escribir |
+
+**El código enviado sigue siendo privado.** Un equipo ve los nombres de los
+demás y quién atacó a quién, que es parte del juego, pero no puede ver una sola
+línea del trabajo ajeno.
+
+### Si prefieres la competencia sin sabotajes
+
+Borra la tabla y listo; el juego lo detecta y esconde la sección:
+
+```sql
+drop table if exists sabotajes cascade;
+```
+
 ## Qué se guarda de cada intento
 
 Cada vez que un equipo pulsa EJECUTAR, se guarda una fila: equipo, encargo,
