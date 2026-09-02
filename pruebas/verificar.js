@@ -580,6 +580,15 @@ async function principal() {
   comprobar('  ninguna concesión de lectura toca la tabla del código',
     conLectura.indexOf('intentos') < 0,
     'con lectura: ' + (conLectura.join(', ') || 'ninguna'));
+
+  /* Las comprobaciones del propio SQL tienen que decir reglas, no volcar la
+     lista de permisos: cuando el sabotaje abrió la lectura de `equipos` a
+     propósito, la versión antigua daba tres falsas alarmas. Una comprobación
+     que grita sin motivo enseña a ignorarla. */
+  comprobar('las comprobaciones del esquema hablan de reglas',
+    /Los equipos NO pueden leer el codigo/.test(sql) &&
+    /Los equipos NO pueden borrar/.test(sql) &&
+    !/MAL: sobra un permiso'/.test(sql));
   comprobar('la vista del marcador no queda legible para los equipos',
     /revoke all on marcador from anon/i.test(sql));
   /* Con "Automatically expose new tables" desmarcada, Supabase no concede

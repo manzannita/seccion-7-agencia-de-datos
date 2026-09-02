@@ -221,19 +221,47 @@ select tablename,
 from pg_tables
 where schemaname = 'public' and tablename in ('equipos', 'intentos');
 
--- 2) la clave pública solo puede insertar (debe decir INSERT y nada más).
---    Se miran los dos roles que expone la API, no solo anon.
-select table_name, grantee,
-       string_agg(privilege_type, ', ' order by privilege_type) as permisos,
-       case when string_agg(privilege_type, ',' order by privilege_type) = 'INSERT'
-            then 'bien' else 'MAL: sobra ' ||
-                 replace(string_agg(privilege_type, ', ' order by privilege_type), 'INSERT, ', '')
-       end as revision
-from information_schema.role_table_grants
-where grantee in ('anon', 'authenticated')
-  and table_schema = 'public'
-  and table_name in ('equipos', 'intentos')
-group by table_name, grantee;
+-- 2) LAS REGLAS QUE IMPORTAN, dichas con palabras.
+--    Antes esto volcaba la lista de permisos y marcaba MAL todo lo que no
+--    fuera INSERT. Cuando el sabotaje abrió la lectura de `equipos` a
+--    propósito, empezó a dar tres falsas alarmas. Una comprobación que grita
+--    sin motivo enseña a ignorarla, y entonces no sirve para nada.
+select regla, revision from (
+  select 1 as orden,
+         'Los equipos NO pueden leer el codigo (tabla intentos)' as regla,
+         case when exists (
+           select 1 from information_schema.role_table_grants
+           where grantee = 'anon' and table_schema = 'public'
+             and table_name = 'intentos' and privilege_type = 'SELECT')
+         then 'MAL: el codigo ajeno queda a la vista' else 'bien' end as revision
+  union all
+  select 2,
+         'Los equipos NO pueden borrar, cambiar ni vaciar nada',
+         case when exists (
+           select 1 from information_schema.role_table_grants
+           where grantee = 'anon' and table_schema = 'public'
+             and privilege_type in ('DELETE', 'UPDATE', 'TRUNCATE')
+             and table_name in ('equipos', 'intentos', 'sabotajes'))
+         then 'MAL: sobra un permiso destructivo' else 'bien' end
+  union all
+  select 3,
+         'Los equipos SI pueden registrar sus intentos',
+         case when exists (
+           select 1 from information_schema.role_table_grants
+           where grantee = 'anon' and table_name = 'intentos'
+             and privilege_type = 'INSERT')
+         then 'bien' else 'MAL: no podran guardar nada' end
+  union all
+  select 4,
+         'Los equipos SI pueden ver nombres y lanzar sabotajes',
+         case when exists (
+           select 1 from information_schema.role_table_grants
+           where grantee = 'anon' and table_name = 'equipos' and privilege_type = 'SELECT')
+          and exists (
+           select 1 from information_schema.role_table_grants
+           where grantee = 'anon' and table_name = 'sabotajes' and privilege_type = 'INSERT')
+         then 'bien' else 'MAL: el sabotaje no funcionara' end
+) t order by orden;
 
 -- 3) la vista del marcador NO debe aparecer para anon (cero filas es lo correcto)
 select 'MAL: el marcador es legible por los equipos' as revision

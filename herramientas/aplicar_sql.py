@@ -254,8 +254,10 @@ def main():
     for i, sentencia in enumerate(partes, 1):
         try:
             filas = con.run(sentencia)
-            es_select = sentencia.lstrip().lower().startswith("select")
-            if es_select and filas is not None:
+            # Mirar solo la primera linea no vale: todas las comprobaciones
+            # empiezan por un comentario. Es el mismo descuido que hacia perder
+            # sentencias enteras al trocear el archivo.
+            if filas is not None and con.columns:
                 consultas.append((resumen(sentencia), filas, con.columns))
             print("  %2d/%d  ok    %s" % (i, len(partes), resumen(sentencia)))
         except Exception as e:
