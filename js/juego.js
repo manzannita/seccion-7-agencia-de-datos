@@ -1185,6 +1185,61 @@ function empezar(nueva) {
   }
 }
 
+/* ---------------------- solo en el laboratorio --------------------------
+   El reto final se juega con teclado: hay que escribir Python y moverse con
+   WASD. Desde el celular no se puede, asi que en vez de dejarles empezar algo
+   que no van a poder terminar, se les manda de vuelta. Se comprueba ANTES de
+   arrancar nada: asi el telefono ni siquiera empieza a bajarse el interprete.
+
+   La organizacion puede saltarselo con ?lab=1, por si alguna maquina del
+   laboratorio diera un falso positivo el dia del evento.                    */
+function enCelular() {
+  try {
+    const busca = (typeof location !== "undefined" && location.search) || "";
+    if (/[?&]lab=1/.test(busca)) return false;
+
+    const nav = (typeof window !== "undefined" && window.navigator) ||
+                (typeof navigator !== "undefined" ? navigator : null);
+    const ua = (nav && nav.userAgent) || "";
+    if (/Android|iPhone|iPad|iPod|Windows Phone|IEMobile|Opera Mini/i.test(ua)) {
+      return true;
+    }
+    /* Un portatil con pantalla tactil sigue teniendo raton, y eso no cuenta:
+       se pregunta si existe ALGUN puntero fino, no como es el principal. */
+    if (typeof window !== "undefined" && window.matchMedia &&
+        !window.matchMedia("(any-pointer: fine)").matches) {
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+/* Ensena la pantalla de vuelta al laboratorio. Si en este mismo telefono ya
+   completaron la caceria, se les recuerda la clave: la tienen aqui y la van a
+   necesitar alla. */
+function mandarAlLaboratorio() {
+  const pantalla = $("pSoloLab");
+  if (pantalla) pantalla.classList.add("visible");
+  const inicio = $("pInicio");
+  if (inicio) inicio.classList.remove("visible");
+
+  try {
+    const R = window.CQ && window.CQ.ruta;
+    if (!R || !R.datos) return;
+    const g = R.leer() || {};
+    let clave = "";
+    for (let i = 1; i <= R.total(); i++) {
+      if (!g.fragmentos || !g.fragmentos[i]) return;   /* aun les falta alguna */
+      clave += g.fragmentos[i];
+    }
+    const caja = $("claveEnMano");
+    if (caja) {
+      caja.innerHTML = "<p>Su clave de acceso es</p>" +
+                       "<h2>" + pixel(clave) + "</h2>";
+    }
+  } catch (e) {}
+}
+
 function conectar() {
   /* Se empieza a bajar Python de inmediato: así ya está listo cuando el
      escuadrón llegue a su primer encargo. */
@@ -1327,16 +1382,21 @@ function conectar() {
   } catch (e) {}
 }
 
-iniciarMundo();
-conectar();
-requestAnimationFrame(bucle);
+if (enCelular()) {
+  mandarAlLaboratorio();
+} else {
+  iniciarMundo();
+  conectar();
+  requestAnimationFrame(bucle);
+}
 
 /* Para depurar durante la competencia: window.S7.estado muestra la partida. */
 window.S7 = {
   estado: estado, jugador: jugador, npcs: npcs, cam: cam,
   hash: hash, normalizar: normalizar,
   dibujar: dibujarEscena, camara: seguirCamara,
-  modo: function (m) { modo = m; }, T: T
+  modo: function (m) { modo = m; }, T: T,
+  enCelular: enCelular, mandarAlLaboratorio: mandarAlLaboratorio
 };
 
 })();

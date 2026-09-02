@@ -294,6 +294,31 @@ El campo `cierre` es lo que ven al completar la ruta, debajo de la clave:
 Si un equipo se atasca de verdad, en `herramientas/rutas.txt` tienes todas las
 respuestas y las direcciones de los QR para probarlos sin caminar.
 
+## El juego solo se juega en el laboratorio
+
+Si alguien abre el juego desde el celular, no entra: sale una pantalla que dice
+**REGRESA AL LABORATORIO**, y si ya completaron la cacería en ese mismo teléfono
+se les recuerda su clave ahí mismo, que la van a necesitar al llegar.
+
+No es solo por reglas: el juego pide escribir Python y moverse con WASD, y desde
+un teléfono no se puede. Además así el celular no se descarga los 49 MB del
+intérprete para nada.
+
+La página de las pistas sí funciona en el celular, claro. Es solo el juego.
+
+### Si una máquina del laboratorio se bloqueara por error
+
+No debería: se comprueba que el navegador se identifique como teléfono **o** que
+no exista ningún ratón conectado, y un portátil con pantalla táctil sigue
+contando como computadora. Pero si el día del evento alguna máquina diera un
+falso positivo, se salta añadiendo `?lab=1` al final de la dirección:
+
+```
+https://manzannita.github.io/seccion-7-agencia-de-datos/?lab=1
+```
+
+Guárdate ese truco por si acaso.
+
 ## Qué se guarda de cada intento
 
 Cada vez que un equipo pulsa EJECUTAR, se guarda una fila: equipo, encargo,

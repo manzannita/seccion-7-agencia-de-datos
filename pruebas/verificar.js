@@ -324,6 +324,59 @@ async function principal() {
       !conPlantilla.resultados || conPlantilla.resultados.filter(x => x.paso).length < casos.length);
   }
 
+  /* --------------------- 3.4 el juego solo en el laboratorio ------------ */
+  titulo('SOLO EN EL LABORATORIO');
+  {
+    const guardados = [window.navigator, window.matchMedia, global.location];
+    function fingir(ua, punteroFino, busca) {
+      window.navigator = ua ? { userAgent: ua } : undefined;
+      window.matchMedia = function (q) {
+        return { matches: /any-pointer: fine/.test(q) ? punteroFino : false };
+      };
+      global.location = { search: busca || '' };
+    }
+    const telefonos = [
+      ['iPhone', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15'],
+      ['Android', 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/124'],
+      ['iPad', 'Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15']
+    ];
+    for (const [nombre, ua] of telefonos) {
+      fingir(ua, false);
+      comprobar('desde ' + nombre + ' NO se puede jugar', S7.enCelular() === true);
+    }
+    const equipos = [
+      ['Windows con Chrome', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124'],
+      ['Mac con Safari', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15'],
+      ['Linux con Firefox', 'Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0']
+    ];
+    for (const [nombre, ua] of equipos) {
+      fingir(ua, true);
+      comprobar('desde ' + nombre + ' SI se puede jugar', S7.enCelular() === false);
+    }
+    /* Un portátil con pantalla táctil tiene puntero grueso Y ratón. */
+    fingir('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124', true);
+    comprobar('un portátil con pantalla táctil sigue valiendo', S7.enCelular() === false);
+    /* Sin ratón en absoluto, aunque el navegador no se identifique: es táctil. */
+    fingir('Mozilla/5.0 (Unknown)', false);
+    comprobar('sin ningún puntero fino se bloquea igual', S7.enCelular() === true);
+    /* La salida de emergencia de la organización. */
+    fingir(telefonos[0][1], false, '?lab=1');
+    comprobar('?lab=1 salta el bloqueo', S7.enCelular() === false);
+
+    /* La pantalla dice lo que tiene que decir. */
+    fingir(telefonos[0][1], false);
+    S7.mandarAlLaboratorio();
+    comprobar('sale la pantalla de volver al laboratorio',
+      el('pSoloLab').classList._v, 'visible=' + el('pSoloLab').classList._v);
+    comprobar('y la portada se esconde', !el('pInicio').classList._v);
+
+    window.navigator = guardados[0];
+    window.matchMedia = guardados[1];
+    global.location = guardados[2];
+    el('pSoloLab').classList.remove('visible');
+    el('pInicio').classList.add('visible');
+  }
+
   /* ------------------------- 3.5 la puerta de la caceria ---------------- */
   /* Sin la clave que arma la caceria de codigos QR no se entra al juego.
      La clave no esta en el juego: se saca de herramientas/pistas.json, que
