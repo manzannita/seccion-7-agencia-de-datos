@@ -27,8 +27,14 @@ Al terminar salen tres comprobaciones y las tres tienen que dar bien:
 | Consulta | Qué debe decir |
 |---|---|
 | 1 | `bien` en las dos tablas (seguridad por fila activada) |
-| 2 | permisos `INSERT` y nada más, en las dos tablas |
+| 2 | `bien` en cada fila: permisos `INSERT` y nada más |
 | 3 | **cero filas** (el marcador no es legible por los equipos) |
+
+> Si la segunda dice `MAL: sobra TRUNCATE`, es porque el proyecto se creó con
+> los permisos por defecto de Supabase, que son más amplios de lo que necesita
+> el juego. **TRUNCATE deja vaciar la tabla entera**: con ese permiso, un
+> equipo podría borrar los resultados de todos. El archivo ya lo corrige
+> revocando todo antes de conceder; vuelve a ejecutarlo completo.
 
 Si alguna sale mal, vuelve a pegar el archivo entero: es idempotente, se puede
 ejecutar las veces que haga falta.

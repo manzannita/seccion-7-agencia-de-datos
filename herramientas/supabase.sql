@@ -57,14 +57,19 @@ create policy intentos_insertar on intentos
 -- mano para no depender de cómo esté configurado el proyecto: así funciona
 -- tengas marcado o no "Automatically expose new tables".
 -- =============================================================================
-grant usage on schema public to anon;
+-- Primero se quita TODO y después se devuelve solo lo imprescindible.
+-- Quitar permisos de uno en uno no sirve: Supabase concede un paquete por
+-- defecto que incluye TRUNCATE, y con TRUNCATE cualquier equipo podría vaciar
+-- la tabla de resultados de todos. Se limpia entero y se concede a mano.
+revoke all on table equipos  from anon, authenticated;
+revoke all on table intentos from anon, authenticated;
+revoke all on sequence intentos_id_seq from anon, authenticated;
+
+grant usage  on schema public to anon;
 grant insert on table equipos  to anon;
 grant insert on table intentos to anon;
-grant usage, select on sequence intentos_id_seq to anon;
-
--- Y lo que NO se da, que importa más: ni leer, ni modificar, ni borrar.
-revoke select, update, delete on table equipos  from anon;
-revoke select, update, delete on table intentos from anon;
+-- usage (no select) sobre la secuencia: basta para que la fila obtenga su id
+grant usage  on sequence intentos_id_seq to anon;
 
 -- =============================================================================
 -- Vista para el panel: una fila por equipo con lo que interesa de un vistazo.
@@ -85,7 +90,7 @@ group by e.id, e.nombre, e.creado_en;
 
 -- La vista es SOLO para el panel de organizadores. Si quedara legible por la
 -- clave pública, un equipo vería el marcador entero desde el navegador.
-revoke all on marcador from anon;
+revoke all on marcador from anon, authenticated;
 grant select on marcador to service_role;
 
 -- =============================================================================
@@ -99,13 +104,19 @@ select tablename,
 from pg_tables
 where schemaname = 'public' and tablename in ('equipos', 'intentos');
 
--- 2) la clave pública solo puede insertar (debe decir INSERT y nada más)
-select table_name, string_agg(privilege_type, ', ' order by privilege_type) as permisos,
+-- 2) la clave pública solo puede insertar (debe decir INSERT y nada más).
+--    Se miran los dos roles que expone la API, no solo anon.
+select table_name, grantee,
+       string_agg(privilege_type, ', ' order by privilege_type) as permisos,
        case when string_agg(privilege_type, ',' order by privilege_type) = 'INSERT'
-            then 'bien' else 'MAL: sobra un permiso' end as revision
+            then 'bien' else 'MAL: sobra ' ||
+                 replace(string_agg(privilege_type, ', ' order by privilege_type), 'INSERT, ', '')
+       end as revision
 from information_schema.role_table_grants
-where grantee = 'anon' and table_schema = 'public'
-group by table_name;
+where grantee in ('anon', 'authenticated')
+  and table_schema = 'public'
+  and table_name in ('equipos', 'intentos')
+group by table_name, grantee;
 
 -- 3) la vista del marcador NO debe aparecer para anon (cero filas es lo correcto)
 select 'MAL: el marcador es legible por los equipos' as revision

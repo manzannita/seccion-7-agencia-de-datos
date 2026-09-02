@@ -536,9 +536,17 @@ async function principal() {
     (sql.match(/enable row level security/gi) || []).length === 2);
   comprobar('los privilegios son explícitos, no heredados de la configuración',
     /grant insert on table equipos/i.test(sql) && /grant insert on table intentos/i.test(sql));
-  comprobar('a los equipos se les quita leer, modificar y borrar',
-    /revoke select, update, delete on table equipos/i.test(sql) &&
-    /revoke select, update, delete on table intentos/i.test(sql));
+  /* Quitar permisos de uno en uno no basta: Supabase concede un paquete que
+     incluye TRUNCATE, y con eso un equipo podría vaciar los resultados de
+     todos. Hay que revocar TODO y devolver solo INSERT. */
+  comprobar('se revocan TODOS los permisos antes de conceder',
+    /revoke all on table equipos\s+from anon, authenticated/i.test(sql) &&
+    /revoke all on table intentos\s+from anon, authenticated/i.test(sql));
+  comprobar('  no queda ningún revoke parcial, que dejaría TRUNCATE',
+    !/revoke\s+select,\s*update,\s*delete/i.test(sql));
+  comprobar('  y solo se devuelve INSERT',
+    (sql.match(/grant insert on table/gi) || []).length === 2 &&
+    !/grant\s+(all|select|update|delete|truncate)\s+on table (equipos|intentos)/i.test(sql));
   comprobar('la vista del marcador no queda legible para los equipos',
     /revoke all on marcador from anon/i.test(sql));
   comprobar('el cliente no lee nada de la base',
