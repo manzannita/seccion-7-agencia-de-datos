@@ -98,6 +98,25 @@
 const R = window.CQ.ruta;
 const $ = id => document.getElementById(id);
 
+/* Dejar el telefono como recien salido de fabrica: .../pistas/?reiniciar=1
+   Es para la organizacion, sobre todo para probar la ruta y devolver el
+   telefono limpio. Va en la direccion y no en un boton a proposito: un
+   boton en pantalla se pulsa sin querer a media cacería.
+
+   Y va antes que nada, incluso antes de comprobar la ruta y el navegador:
+   limpiar solo necesita el almacen del telefono. Si estuviera despues, en el
+   caso mas normal de probar --el telefono entrando por http:// al servidor de
+   la sala, donde no hay crypto.subtle-- la pagina cortaria con "este
+   navegador no sirve" y ?reiniciar=1 no haria nada. */
+if (/[?&]reiniciar=1/.test(location.search || "")) {
+  R.guardar({});
+  document.body.innerHTML =
+    "<h1 style='color:#1fb8d4'>TELÉFONO LIMPIO</h1>" +
+    "<p>Se borró el avance que hubiera en este teléfono.</p>" +
+    "<p><a style='color:#1fb8d4' href='./'>Empezar de nuevo</a></p>";
+  throw new Error("reiniciado");       /* no sigas montando la pagina */
+}
+
 if (!R.datos) {
   document.body.innerHTML = "<h1>Ruta sin configurar</h1>" +
     "<p>Falta generar las pistas con herramientas/generar_pistas.py.</p>";
@@ -110,19 +129,6 @@ if (!R.datos) {
 } else {
   $("titulo").textContent = R.datos.titulo || "RUTA DE ACCESO";
   const TOTAL = R.total();
-
-  /* Dejar el telefono como recien salido de fabrica: .../pistas/?reiniciar=1
-     Es para la organizacion, sobre todo para probar la ruta y devolver el
-     telefono limpio. Va en la direccion y no en un boton a proposito: un
-     boton en pantalla se pulsa sin querer a media cacería. */
-  if (/[?&]reiniciar=1/.test(location.search || "")) {
-    R.guardar({});
-    document.body.innerHTML =
-      "<h1 style='color:#1fb8d4'>TELÉFONO LIMPIO</h1>" +
-      "<p>Se borró el avance que hubiera en este teléfono.</p>" +
-      "<p><a style='color:#1fb8d4' href='./'>Empezar de nuevo</a></p>";
-    throw new Error("reiniciado");     /* no sigas montando la pagina */
-  }
 
   /* La ficha del cartel viaja en la direccion: .../pistas/?e=xxxx */
   const ficha = (function () {

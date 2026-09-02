@@ -283,6 +283,11 @@ Borra el avance de ese teléfono y vuelve a pedir el código de arranque. Va en
 la dirección y no en un botón a propósito: un botón en pantalla se pulsa sin
 querer a media cacería.
 
+Funciona en cualquier copia de la página, también en la de tu máquina
+(`http://192.168.x.x:8000/pistas/?reiniciar=1`). Ojo con una cosa: **cada
+dirección guarda su propio avance**. Si probaste en la copia local, hay que
+limpiar la local; limpiar la de GitHub Pages no la toca, y al revés.
+
 La otra opción, si solo quieres probar: hazlo en una ventana privada o de
 incógnito. Al cerrarla no queda nada.
 

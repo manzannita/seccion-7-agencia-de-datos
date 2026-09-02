@@ -52,9 +52,12 @@ function nuevoDom(ficha, almacen) {
 
 /* Abre la pagina como si escanearan el cartel de esa ficha. El almacen se
    comparte entre cargas: es el mismo telefono. */
-function abrirPagina(ficha, almacen, busca) {
+function abrirPagina(ficha, almacen, busca, sinCrypto) {
   const ctx = nuevoDom(ficha, almacen);
   if (busca) ctx.location.search = busca;
+  /* Un telefono entrando por http:// a la maquina de la sala: el navegador no
+     da crypto.subtle, y la pagina corta con "este navegador no sirve". */
+  if (sinCrypto) ctx.crypto = {};
   ctx.window = ctx;
   vm.createContext(ctx);
   for (const f of ['js/pistas-datos.js', 'js/pistas.js']) {
@@ -306,6 +309,21 @@ async function probar() {
     ok(cuantos(limpio) === 0, 'con ?reiniciar=1 el avance desaparece');
     ok(!avance(limpio).equipo, 'y ya no recuerda de que equipo era');
     ok(!limpio.nodos.pasoArranque.hidden, 'vuelve a pedir el codigo de arranque');
+  }
+
+  /* Probar la ruta es casi siempre entrar por http:// al servidor de la sala,
+     y ahi la pagina no puede descifrar nada y lo dice. Limpiar el telefono no
+     necesita descifrar nada, asi que tiene que funcionar igual. */
+  {
+    const almacen = {};
+    let ctx = abrirPagina(null, almacen);
+    await meterCodigo(ctx, arranques[equipos[0]]);
+    ok(avance(ctx).equipo, 'con avance guardado en el telefono');
+
+    const roto = abrirPagina(null, almacen, '?reiniciar=1', true);
+    ok(/LIMPIO/.test(roto.document.body.innerHTML),
+       'y sin crypto.subtle (http://) el reinicio igual dice TELEFONO LIMPIO');
+    ok(!avance(abrirPagina(null, almacen)).equipo, 'y el avance desaparece');
   }
 
   /* ------------- la respuesta sola no abre nada desde fuera ------------- */
