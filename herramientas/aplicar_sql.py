@@ -33,14 +33,33 @@ except ImportError:
                      "    python -m pip install pg8000")
 
 
-def cadena_conexion():
-    if os.path.exists(GUARDADO):
-        with open(GUARDADO, encoding="utf-8") as f:
-            guardada = f.read().strip()
-        if guardada:
-            return guardada
-    # Sin terminal de verdad, getpass no puede leer nada y falla de forma
-    # confusa. Mejor decirlo claro antes de intentarlo.
+def revisar(cad):
+    """Devuelve el motivo por el que la cadena no sirve, o None si esta bien.
+
+    Se comprueba ANTES de guardar. La primera version guardaba lo que fuera y
+    fallaba despues: con un valor malo dentro, todas las corridas siguientes
+    morian igual y ya no volvia a preguntar. Un archivo envenenado y sin
+    salida visible.
+    """
+    if not cad:
+        return "no escribiste nada"
+    if "[" in cad or "]" in cad:
+        return "lleva corchetes: copiaste el ejemplo sin poner tu contrasena"
+    if " " in cad.strip():
+        return "lleva espacios: se corto al pegar, o eso no es la cadena"
+    if not cad.startswith("postgres"):
+        return "no empieza por postgresql:// (esto parece otra cosa)"
+    u = urlparse(cad)
+    if not u.hostname:
+        return "no trae host"
+    if not u.username:
+        return "no trae usuario"
+    if not u.password:
+        return "no trae contrasena"
+    return None
+
+
+def pedir_cadena():
     if not sys.stdin.isatty():
         aviso = [
             "",
@@ -50,17 +69,42 @@ def cadena_conexion():
             "      cd " + RAIZ,
             "      python herramientas/aplicar_sql.py",
             "",
-            "  Solo hace falta la primera vez: despues queda guardada.",
-            "",
         ]
         raise SystemExit(chr(10).join(aviso))
+
     print("")
-    print("  La cadena esta en Supabase: boton Connect (arriba) -> Session pooler.")
+    print("  Necesito la cadena de conexion de tu base.")
+    print("  En Supabase: boton Connect (arriba) -> Session pooler -> copiar el URI.")
     print("  Empieza por postgresql:// y lleva la contrasena de la base.")
     print("")
-    cad = getpass.getpass("  Pega la cadena de conexion (no se vera al escribir): ").strip()
-    if not cad:
-        raise SystemExit("Sin cadena de conexión no puedo hacer nada.")
+    print("  OJO: lo que pegues NO se vera en pantalla. Es normal.")
+    print("  En esta ventana se pega con clic derecho, no con Ctrl+V.")
+    print("")
+    for intento in range(3):
+        cad = getpass.getpass("  Pega la cadena y pulsa Enter: ").strip()
+        motivo = revisar(cad)
+        if motivo is None:
+            return cad
+        print("  Esa cadena no sirve: " + motivo)
+        if intento < 2:
+            print("  Intentalo de nuevo.")
+            print("")
+    raise SystemExit("  Tres intentos fallidos. Revisa la cadena y vuelve a ejecutarlo.")
+
+
+def cadena_conexion():
+    if os.path.exists(GUARDADO):
+        with open(GUARDADO, encoding="utf-8") as f:
+            guardada = f.read().strip()
+        motivo = revisar(guardada)
+        if motivo is None:
+            return guardada
+        # guardada pero invalida: se tira y se vuelve a preguntar, en vez de
+        # fallar una y otra vez sin decir como salir del atolladero
+        print("  La cadena guardada no sirve (" + motivo + "). La pido de nuevo.")
+        os.remove(GUARDADO)
+
+    cad = pedir_cadena()
     with open(GUARDADO, "w", encoding="utf-8") as f:
         f.write(cad)
     try:

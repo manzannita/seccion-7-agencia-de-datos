@@ -693,6 +693,16 @@ async function principal() {
   comprobar('  y no descarta los trozos que empiezan por comentario',
     /tiene_sql/.test(aplicador) && !/texto\.startswith\("--"\)/.test(aplicador));
 
+  /* Guardar sin comprobar dejaba el archivo envenenado: con un valor malo
+     dentro, todas las corridas siguientes fallaban igual y ya no preguntaba. */
+  comprobar('la cadena se comprueba ANTES de guardarla',
+    aplicador.indexOf('def revisar(') < aplicador.indexOf('f.write(cad)') &&
+    /motivo = revisar\(cad\)/.test(aplicador));
+  comprobar('  y si la guardada no sirve, la pide otra vez',
+    /La cadena guardada no sirve/.test(aplicador) && /os\.remove\(GUARDADO\)/.test(aplicador));
+  comprobar('  avisa de que lo pegado no se ve',
+    /NO se vera en pantalla/.test(aplicador));
+
 
   /* --------------------------------------------- 5. teclado ------------- */
   titulo('TECLADO');
