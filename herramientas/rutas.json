@@ -14,6 +14,11 @@
    "C",
    "A",
    "B"
+  ],
+  "PyHunters 2.0": [
+   "A",
+   "B",
+   "C"
   ]
  },
  "fichas": {
@@ -24,6 +29,7 @@
  "arranques": {
   "PyHunters": "VEGA-8698",
   "Los migajeros de FP 😋": "ORION-7778",
-  "Team Random": "SIGMA-7858"
+  "Team Random": "SIGMA-7858",
+  "PyHunters 2.0": "DELTA-2999"
  }
 }

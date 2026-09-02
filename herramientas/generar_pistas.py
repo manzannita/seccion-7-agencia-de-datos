@@ -432,7 +432,25 @@ def main():
         print("  Se reutilizaron los codigos y los QR de antes: lo ya impreso vale.")
     print()
     print("  clave final: %s" % clave_final)
-    print("  Cada equipo empieza en una estacion distinta, para que no se amontonen.")
+
+    # La rotacion solo da tantos puntos de partida como estaciones haya. Con
+    # mas equipos que estaciones, alguien arranca acompanado, y eso hay que
+    # decirlo: es un tapon el primer minuto, cuando todos salen a la vez.
+    partidas = {}
+    for equipo, ruta in recorridos.items():
+        partidas.setdefault(ruta[0]["lugar"], []).append(equipo)
+    juntos = {l: q for l, q in partidas.items() if len(q) > 1}
+    if not juntos:
+        print("  Cada equipo empieza en una estacion distinta, para que no se "
+              "amontonen.")
+    else:
+        print()
+        print("  OJO: hay %d equipos para %d estaciones, asi que no alcanzan los"
+              % (len(equipos), len(estaciones)))
+        print("  puntos de partida y estos salen al mismo sitio:")
+        for lugar, quienes in juntos.items():
+            print("     %s  <-  %s" % (lugar, ", ".join(quienes)))
+        print("  Una estacion mas en pistas.json da un punto de partida mas.")
 
 
 if __name__ == "__main__":

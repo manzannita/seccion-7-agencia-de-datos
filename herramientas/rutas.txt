@@ -5,6 +5,7 @@ CODIGO DE ARRANQUE DE CADA EQUIPO
    PyHunters  VEGA-8698    empieza en TAWS
    Los migajeros de FP 😋 ORION-7778   empieza en Labs de FIEC (edificio externo)
    Team Random SIGMA-7858   empieza en Entrada a Coding Bootcamps ESPOL, FIEC nueva
+   PyHunters 2.0 DELTA-2999   empieza en TAWS
 
 DIRECCION DE CADA CARTEL (para probarlos sin caminar)
    [A] TAWS                                       https://manzannita.github.io/seccion-7-agencia-de-datos/pistas/?e=4d4tmataiurt
@@ -25,4 +26,9 @@ Team Random
    1. [C] Entrada a Coding Bootcamps ESPOL, FIEC nueva   respuesta: 42           da: 7X9
    2. [A] TAWS                                           respuesta: DATOS        da: NUC
    3. [B] Labs de FIEC (edificio externo)                respuesta: CODIGO       da: LEO
+
+PyHunters 2.0
+   1. [A] TAWS                                           respuesta: DATOS        da: NUC
+   2. [B] Labs de FIEC (edificio externo)                respuesta: CODIGO       da: LEO
+   3. [C] Entrada a Coding Bootcamps ESPOL, FIEC nueva   respuesta: 42           da: 7X9
 
