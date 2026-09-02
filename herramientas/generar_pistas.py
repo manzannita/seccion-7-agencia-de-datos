@@ -12,14 +12,20 @@ Deja tres cosas:
 
 POR QUÉ VA CIFRADO
 Si la web llevara las pistas en claro, cualquiera abre el código fuente del
-navegador y se las lee todas sin levantarse de la silla. Aquí cada estación
-guarda su recompensa cifrada CON LA RESPUESTA DE ESA ESTACIÓN, y el acertijo
-solo está impreso en el cartel. Sin ir al sitio no hay respuesta, y sin
-respuesta lo que se descarga es ruido.
+navegador y se las lee todas sin levantarse de la silla. Aquí todo va cerrado
+con dos llaves, y las dos exigen haber ido al sitio:
 
-El cifrado es PBKDF2-SHA256 usado como flujo de clave, con la respuesta como
-contraseña y una sal distinta por estación y equipo. Se hace igual aquí y en
-el navegador; no hace falta ninguna librería en ninguno de los dos lados.
+  el reto de cada estación    con la FICHA que viaja en el QR de su cartel
+  la recompensa de cada uno   con esa misma FICHA MÁS LA RESPUESTA del reto
+
+La ficha son doce caracteres al azar que solo están impresos en el cartel. Por
+eso no vale con adivinar la respuesta: aunque alguien pruebe "42" contra todos
+los cofres desde su casa, sin la ficha no abre ninguno. Y para tener la ficha
+hay que haber escaneado ese cartel.
+
+El cifrado es PBKDF2-SHA256 usado como flujo de clave, con una sal distinta
+por cofre. Se hace igual aquí y en el navegador; no hace falta ninguna
+librería en ninguno de los dos lados.
 """
 import base64
 import hashlib
@@ -96,13 +102,17 @@ def carteles(cfg, url_base, fichas):
       <div class="titulo">%s</div>
       <div class="subtitulo">%s</div>
     </div>
-    <div class="estacion">ESTACION %s</div>
+    <div class="estacion">ESTACIÓN %s</div>
     <div class="instruccion">
-      Escanea este codigo con el celular.<br>
-      Ahi aparece tu reto.
+      Escanea este código con el celular.<br>
+      Ahí aparece tu reto.
     </div>
     <div class="qr">%s</div>
-    <div class="pie">%s</div>
+    <div class="consejo">
+      Ábrelo en tu navegador (Chrome, Safari…), no dentro del lector de
+      códigos, o pueden perder lo que llevan.
+    </div>
+    <div class="pie">Si el QR falla, escriban esta dirección:<br>%s</div>
   </section>""" % (escapa(cfg.get("titulo", "")), escapa(cfg.get("subtitulo", "")),
                    escapa(e["id"]), svg, escapa(destino)))
 
@@ -123,7 +133,9 @@ def carteles(cfg, url_base, fichas):
              padding: 3mm 10mm; }
  .instruccion { font-size: 15pt; color: #333; margin: 8mm 0; line-height: 1.6; }
  .qr svg { width: 95mm; height: 95mm; }
- .pie { font-size: 9pt; color: #777; margin-top: 6mm; word-break: break-all; }
+ .consejo { font-size: 11pt; color: #444; margin-top: 7mm; max-width: 120mm;
+            line-height: 1.5; }
+ .pie { font-size: 9pt; color: #777; margin-top: 5mm; word-break: break-all; }
  @media screen { body { background:#eee; padding: 10mm; }
                  .cartel { background: #fff; margin-bottom: 8mm; height: auto; } }
 </style></head><body>%s</body></html>""" % (escapa(cfg.get("titulo", "")), "".join(trozos))
@@ -177,7 +189,7 @@ def hoja_codigos(cfg, recorridos, arranques):
                 escapa(ruta[0]["lugar"])))
 
     return """<!DOCTYPE html>
-<html lang="es"><head><meta charset="utf-8"><title>Codigos de arranque</title>
+<html lang="es"><head><meta charset="utf-8"><title>Códigos de arranque</title>
 <style>
  @page { size: A4; margin: 16mm; }
  body { font-family: Georgia, serif; color: #0b1020; }
@@ -192,15 +204,15 @@ def hoja_codigos(cfg, recorridos, arranques):
            font-weight: bold; letter-spacing: .08em; width: 28%%; }
  .lugar { font-size: 12pt; color: #333; }
 </style></head><body>
-  <h1>%s &mdash; CODIGOS DE ARRANQUE</h1>
+  <h1>%s &mdash; CÓDIGOS DE ARRANQUE</h1>
   <div class="nota">
-    Esta hoja es para la organizacion, no para los equipos.<br>
-    Dale a cada equipo <strong>solo su codigo</strong>. Con el, la pagina les
-    dice donde esta su primera estacion. La columna de la derecha es para que
-    tu sepas donde los mandaste.
+    Esta hoja es para la organización, no para los equipos.<br>
+    Dale a cada equipo <strong>solo su código</strong>. Con él, la página les
+    dice dónde está su primera estación. La columna de la derecha es para
+    que tú sepas dónde los mandaste.
   </div>
   <table>
-    <tr><th>EQUIPO</th><th>CODIGO</th><th>EMPIEZA EN</th></tr>%s
+    <tr><th>EQUIPO</th><th>CÓDIGO</th><th>EMPIEZA EN</th></tr>%s
   </table>
 </body></html>""" % (escapa(cfg.get("titulo", "")), "".join(filas))
 
@@ -265,7 +277,11 @@ def main():
                 "n": sitio[e["id"]],
                 "siguiente": siguiente,
             }, ensure_ascii=False)
-            sal, ct, sello = cifra(e["respuesta"], mensaje)
+            # La llave es la ficha del QR MAS la respuesta, no la respuesta
+            # sola. Una respuesta corta ("42") se rompe a fuerza bruta desde
+            # casa en segundos; con la ficha delante hay que haber escaneado
+            # ese cartel para siquiera intentarlo.
+            sal, ct, sello = cifra(fichas[e["id"]] + e["respuesta"], mensaje)
             cofres[e["id"]] = {"s": sal, "c": ct, "v": sello}
         # El punto de partida NO va en el archivo. Con varios equipos, cada
         # uno empieza en una estacion distinta, asi que publicar los arranques

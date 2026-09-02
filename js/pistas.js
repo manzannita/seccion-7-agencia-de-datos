@@ -1,9 +1,10 @@
 /* =============================================================================
    SECCIÓN 7 — pistas.js
-   La ruta física, desde el celular. Cada estación guarda su recompensa cifrada
-   con la respuesta de esa estación, y el acertijo solo está impreso en el
-   cartel. Descargar esta página no adelanta nada: sin ir al sitio no hay
-   respuesta, y sin respuesta lo que hay aquí es ruido.
+   La ruta física, desde el celular. Todo va cerrado con la ficha que viaja en
+   el QR de cada cartel: el reto con la ficha sola, y la recompensa con la
+   ficha más la respuesta. Descargar esta página no adelanta nada: sin haber
+   escaneado el cartel no hay ficha, y sin ficha no abre nada, por bien que se
+   adivine la respuesta.
 
    El descifrado usa PBKDF2-SHA256 como flujo de clave, igual que lo cifró
    herramientas/generar_pistas.py. No hace falta ninguna librería.
@@ -13,7 +14,6 @@
 
 const datos = (window.CQ && window.CQ.pistas) || null;
 const GUARDADO = "seccion7-ruta";
-const $ = function (id) { return document.getElementById(id); };
 
 function normaliza(t) {
   return String(t || "").toLowerCase().normalize("NFD")
@@ -34,8 +34,12 @@ function iguales(a, b) {
 /* Descifra el cofre de una estación con la respuesta que escribió el equipo.
    Devuelve el contenido, o null si la respuesta no es la correcta. */
 function abrir(cofre, respuesta) {
+  const limpia = normaliza(respuesta);
+  /* Una respuesta que al normalizarla no deja nada ("???", "...") no abre
+     nada, y ademas hay navegadores que revientan con una clave vacia. */
+  if (!limpia) return Promise.resolve(null);
   const sal = deB64(cofre.s), cifrado = deB64(cofre.c), sello = deB64(cofre.v);
-  const clave = new TextEncoder().encode(normaliza(respuesta));
+  const clave = new TextEncoder().encode(limpia);
   return crypto.subtle.importKey("raw", clave, "PBKDF2", false, ["deriveBits"])
     .then(function (k) {
       return crypto.subtle.deriveBits(
@@ -77,6 +81,12 @@ function guardar(e) {
 window.CQ = window.CQ || {};
 window.CQ.ruta = {
   datos: datos,
+  /* Sin crypto.subtle no se puede descifrar nada. Falta en navegadores muy
+     viejos y en cualquier pagina servida por http:// en vez de https://.
+     Mejor decirlo claro que dejar que reviente al primer intento. */
+  disponible: function () {
+    return !!(typeof crypto !== "undefined" && crypto.subtle);
+  },
   normaliza: normaliza,
   abrir: abrir,
   leer: leer,

@@ -1224,6 +1224,13 @@ function conectar() {
       if (aviso) aviso.textContent = "Falta la clave. Sale de juntar todas las pistas.";
       return Promise.resolve(false);
     }
+    if (!window.CQ.ruta.disponible()) {
+      if (aviso) {
+        aviso.textContent = "Este navegador no puede comprobar la clave. " +
+          "Abran el juego en Chrome, Safari o Firefox, con https.";
+      }
+      return Promise.resolve(false);
+    }
     if (aviso) aviso.textContent = "Comprobando…";
     return window.CQ.ruta.claveOk(texto).then(function (vale) {
       if (aviso) {

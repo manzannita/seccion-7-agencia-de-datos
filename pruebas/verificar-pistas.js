@@ -161,6 +161,28 @@ async function probar() {
     ok(/no corresponde/.test(ctx.nodos.textoEsperar.textContent), 'y lo dice');
   }
 
+  /* ------------- escanean primero y meten el codigo despues ------------- */
+  /* Pasara: llegan al cartel, escanean por curiosidad y solo entonces sacan
+     el papel con su codigo. La pagina tiene que seguir desde ahi. */
+  console.log('\nEscanear antes de meter el codigo');
+  {
+    const almacen = {};
+    const equipo = equipos[0], primera = rutas[equipo][0];
+    const ctx = abrirPagina(fichas[primera], almacen);
+    await hasta(() => !ctx.nodos.pasoArranque.hidden);
+    ok(!ctx.nodos.pasoArranque.hidden, 'sin codigo pide el codigo, aunque escaneen');
+    ok(ctx.nodos.pasoReto.hidden, 'y todavia no ensena el reto');
+
+    await meterCodigo(ctx, arranques[equipo]);
+    await hasta(() => !ctx.nodos.pasoReto.hidden);
+    ok(!ctx.nodos.pasoReto.hidden, 'al meter el codigo aparece el reto de ese cartel');
+    ok(ctx.nodos.etiquetaEstacion.textContent === 'ESTACIÓN ' + primera,
+       'y es el reto del cartel que tenian delante');
+
+    await responder(ctx, respuestaDe[primera]);
+    ok(cuantos(ctx) === 1, 'y pueden responder ahi mismo');
+  }
+
   /* --------------------------- recorrido completo ----------------------- */
   console.log('\nRecorrido completo de cada equipo');
   for (const equipo of equipos) {
@@ -190,6 +212,35 @@ async function probar() {
     ok(!clavePorAhi, equipo + ': NO hay clave antes de la ultima estacion');
   }
 
+  /* ------------------ un telefono prestado no regala nada --------------- */
+  console.log('\nUn telefono que ya uso otro equipo');
+  {
+    const almacen = {};                       /* el mismo telefono */
+    const primero = equipos[0], segundo = equipos[1];
+    let ctx = abrirPagina(null, almacen);
+    await meterCodigo(ctx, arranques[primero]);
+    for (const id of rutas[primero]) {
+      ctx = await escanear(fichas[id], almacen);
+      await responder(ctx, respuestaDe[id]);
+    }
+    ok(claveEnPantalla(ctx) === claveFinal, primero + ' termina su ruta');
+
+    ctx = abrirPagina(null, almacen);
+    await meterCodigo(ctx, arranques[segundo]);
+    ok(avance(ctx).equipo === segundo, 'el telefono pasa a ' + segundo);
+    ok(cuantos(ctx) === 0, segundo + ' NO hereda los fragmentos del otro');
+    ok(!claveEnPantalla(ctx), segundo + ' no ve la clave sin caminar');
+    ok(/se borr/.test(aviso(ctx)), 'y avisa de que se borro el avance anterior');
+
+    /* Volver a meter el codigo del mismo equipo no le borra lo suyo. */
+    ctx = await escanear(fichas[rutas[segundo][0]], almacen);
+    await responder(ctx, respuestaDe[rutas[segundo][0]]);
+    ok(cuantos(ctx) === 1, segundo + ' avanza normal');
+    ctx = abrirPagina(null, almacen);
+    await meterCodigo(ctx, arranques[segundo]);
+    ok(cuantos(ctx) === 1, 'y repetir su propio codigo no le borra lo que lleva');
+  }
+
   /* ---------------------- sin todos los QR no se acaba ------------------ */
   console.log('\nSin todos los QR no se puede terminar');
   for (const equipo of equipos.slice(0, 3)) {
@@ -215,7 +266,8 @@ async function probar() {
     await meterCodigo(a, arranques[equipos[0]]);
     const primera = rutas[equipos[0]][0];
     const ctx = await escanear(fichas[primera], almacen);
-    for (const mala of ['perro', '0', claveFinal, respuestaDe[primera] + 'x']) {
+    for (const mala of ['perro', '0', claveFinal, respuestaDe[primera] + 'x',
+                        '???', '...', 'áéí']) {
       await responder(ctx, mala);
       ok(cuantos(ctx) === 0, JSON.stringify(mala) + ' no entrega ningun fragmento');
       ok(/no es/.test(aviso(ctx)), JSON.stringify(mala) + ' avisa del error');
@@ -230,6 +282,39 @@ async function probar() {
     await responder(ctx, respuestaDe[primera]);
     ok(cuantos(ctx) === 1, 'repetir la misma estacion no suma de mas');
     ok(/ya la ten/.test(aviso(ctx)), 'y avisa que esa ya la tenian');
+  }
+
+  /* ------------- la respuesta sola no abre nada desde fuera ------------- */
+  /* Alguien que se baje pistas-datos.js y pruebe respuestas cortas ("42") a
+     fuerza bruta no debe sacar nada: la recompensa esta cerrada con la ficha
+     del cartel ademas de la respuesta. */
+  console.log('\nNo se puede romper desde casa');
+  {
+    const R = abrirPagina(null, {}).window.CQ.ruta;
+    for (const equipo of equipos) {
+      for (const id of rutas[equipo]) {
+        const cofre = R.cofres(equipo)[id];
+        const sola = await R.abrir(cofre, respuestaDe[id]);
+        ok(sola === null,
+           'la respuesta de ' + id + ' sin la ficha no abre el cofre de ' + equipo);
+      }
+    }
+    /* Y con la ficha correcta si abre: la ruta sigue funcionando. */
+    const cofre = R.cofres(equipos[0])[rutas[equipos[0]][0]];
+    const id = rutas[equipos[0]][0];
+    const con = await R.abrir(cofre, fichas[id] + respuestaDe[id]);
+    ok(con && con.fragmento, 'con la ficha del cartel si abre');
+
+    /* Fuerza bruta corta contra el cofre de la estacion de respuesta "42". */
+    const corta = claro.estaciones.filter(e => e.respuesta.length <= 3)[0];
+    if (corta) {
+      let rota = false;
+      for (let n = 0; n < 200 && !rota; n++) {
+        const c = R.cofres(equipos[0])[corta.id];
+        if (await R.abrir(c, String(n))) rota = true;
+      }
+      ok(!rota, 'probar 200 numeros contra la estacion ' + corta.id + ' no la abre');
+    }
   }
 
   /* -------------------- los datos publicados no filtran ----------------- */

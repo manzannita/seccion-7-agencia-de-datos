@@ -101,6 +101,12 @@ const $ = id => document.getElementById(id);
 if (!R.datos) {
   document.body.innerHTML = "<h1>Ruta sin configurar</h1>" +
     "<p>Falta generar las pistas con herramientas/generar_pistas.py.</p>";
+} else if (!R.disponible()) {
+  document.body.innerHTML =
+    "<h1>Este navegador no sirve</h1>" +
+    "<p>Abran esta página en Chrome, Safari o Firefox, y asegúrense de que la " +
+    "dirección empiece por <b>https://</b>. Si la abrieron desde el lector de " +
+    "códigos QR, busquen la opción de abrirla en el navegador.</p>";
 } else {
   $("titulo").textContent = R.datos.titulo || "RUTA DE ACCESO";
   const TOTAL = R.total();
@@ -179,11 +185,17 @@ if (!R.datos) {
     R.arrancar(codigo).then(function (a) {
       $("btnArrancar").disabled = false;
       if (!a) { decir("Ese código no es. Pídanlo a la organización.", false); return; }
+      /* Si este telefono venia de otro equipo, se empieza de cero. Sin esto
+         bastaria con prestarse el celular para heredar la clave entera. */
       const g = R.leer();
+      const heredado = g.equipo && g.equipo !== a.equipo ? g.equipo : null;
+      if (g.equipo !== a.equipo) g.fragmentos = {};
       g.equipo = a.equipo;
       g.fragmentos = g.fragmentos || {};
       R.guardar(g);
-      decir("Listo, <b>" + escapar(a.equipo) + "</b>. Su primera estación:" +
+      decir((heredado ? "Este teléfono traía el avance de " + escapar(heredado) +
+                        ", se borró.<br>" : "") +
+            "Listo, <b>" + escapar(a.equipo) + "</b>. Su primera estación:" +
             "<div class='lugar'>" + escapar(a.primera) + "</div>" +
             "Busquen el cartel y escaneen el código QR.", true);
       arrancarPaso();
@@ -206,7 +218,9 @@ if (!R.datos) {
 
     this.disabled = true;
     decir("Comprobando…", true);
-    R.abrir(cofre, respuesta).then(function (c) {
+    /* La recompensa esta cerrada con la ficha del cartel MAS la respuesta.
+       Aqui tenemos la ficha porque escanearon; desde fuera no. */
+    R.abrir(cofre, ficha + respuesta).then(function (c) {
       $("btnResponder").disabled = false;
       if (!c) { decir("Esa no es. Vuelvan a mirar el reto.", false); return; }
 
