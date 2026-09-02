@@ -464,7 +464,11 @@ function aplicarSabotaje(fila) {
   const def = SAB.buscar(fila.tipo);
   if (!def) return;
   estorbo = { tipo: fila.tipo, hasta: tiempoTotal + def.segundos, de: fila.de_nombre };
-  anunciar(mayus(def.nombre) + "  ·  " + pixel(fila.de_nombre || "alguien"), true);
+  /* Dos avisos: uno grande que dice QUIÉN fue, y el contador de la esquina
+     que dice cuánto falta. Un estorbo sin explicación se lee como un fallo
+     del juego, y entonces la culpa se la lleva el juego y no el rival. */
+  anunciar("¡SABOTAJE DE " + mayus(fila.de_nombre || "alguien") + "!", "alarma");
+  anunciar(mayus(def.nombre) + " · " + def.segundos + "s", "alarma");
   sfx.mal();
 }
 let proximaConsulta = 0;
@@ -485,7 +489,13 @@ function vigilarSabotajes(dt) {
    espera en vez de pisar al primero. */
 const colaAvisos = [];
 let avisoHasta = 0;
-function anunciar(texto, fuerte) { colaAvisos.push({ texto: texto, fuerte: !!fuerte }); }
+/* estilo: nada (XP), "fuerte" (subir de rango, dorado) o "alarma" (te
+   atacaron, rojo). Usar el mismo aviso dorado para una buena noticia y para
+   un sabotaje confunde: hay que poder distinguirlo de un vistazo. */
+function anunciar(texto, estilo) {
+  const clase = estilo === true ? "fuerte" : (estilo || "");
+  colaAvisos.push({ texto: texto, clase: clase });
+}
 function moverAvisos() {
   const e = $("logro");
   if (!e) return;
@@ -494,8 +504,8 @@ function moverAvisos() {
   const a = colaAvisos.shift();
   if (!a) return;
   e.textContent = a.texto;
-  e.className = "visible" + (a.fuerte ? " fuerte" : "");
-  avisoHasta = tiempoTotal + (a.fuerte ? 2.4 : 1.4);
+  e.className = "visible" + (a.clase ? " " + a.clase : "");
+  avisoHasta = tiempoTotal + (a.clase ? 2.6 : 1.4);
 }
 
 /* --------------------------- rótulo de sala ------------------------------ */

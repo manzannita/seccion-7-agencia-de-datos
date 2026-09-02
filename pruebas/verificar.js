@@ -630,6 +630,16 @@ async function principal() {
   comprobar('los efectos solo estorban el mundo, no el editor',
     efectos.every(t => ['apagon', 'compuertas', 'interferencia'].indexOf(t) >= 0),
     efectos.join(', '));
+  /* Un estorbo sin explicación se lee como un fallo del juego, y entonces la
+     culpa se la lleva el juego en vez del rival. */
+  comprobar('a quien lo recibe se le dice quién fue',
+    /SABOTAJE DE/.test(juego) && /de_nombre/.test(juego));
+  comprobar('  con un aviso distinto al de las buenas noticias',
+    /"alarma"/.test(juego) && /#logro\.alarma/.test(
+      fs.readFileSync(ruta.join(RAIZ, 'index.html'), 'utf8')));
+  comprobar('  y un contador en pantalla mientras dura',
+    /\$\("estorbo"\)/.test(juego) && /Math\.ceil\(e\.hasta - tiempoTotal\)/.test(juego));
+
   comprobar('  ningún efecto toca el editor ni el código escrito',
     !/estorbo[\s\S]{0,200}editor\.(poner|leer)/.test(juego) &&
     !/sabotajeActivo\(\)[\s\S]{0,120}borradores/.test(juego));

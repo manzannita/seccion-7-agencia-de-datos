@@ -95,6 +95,18 @@
     color:var(--ambar); border-color:var(--ambar); font-size:calc(var(--u)*6);
     box-shadow:0 0 calc(var(--u)*6) rgba(245,193,78,.35);
   }
+  /* rojo y temblando: un ataque no puede parecerse a una buena noticia */
+  #logro.alarma{
+    color:var(--rojo); border-color:var(--rojo); font-size:calc(var(--u)*6);
+    background:rgba(40,12,20,.95);
+    box-shadow:0 0 calc(var(--u)*7) rgba(240,120,140,.45);
+    animation:sacudida .4s ease-in-out 2;
+  }
+  @keyframes sacudida{
+    0%,100%{transform:translateX(-50%)}
+    25%{transform:translateX(calc(-50% - var(--u)*2))}
+    75%{transform:translateX(calc(-50% + var(--u)*2))}
+  }
 
   /* rótulo de sala al entrar */
   #sala{
