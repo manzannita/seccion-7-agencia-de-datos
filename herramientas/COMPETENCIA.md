@@ -19,8 +19,23 @@ equipos y un panel donde ves el avance de todos.
      permisos a mano. Si quieres la configuración más prudente: deja
      *Enable Data API* marcada (sin ella el juego no puede escribir), desmarca
      *Automatically expose new tables* y marca *Enable automatic RLS*.
-3. Abre **SQL Editor** en el menú de la izquierda.
-4. Pega el contenido completo de `herramientas/supabase.sql` y dale a *Run*.
+3. Aplica el esquema. Hay dos formas:
+
+   **La cómoda, sin copiar ni pegar** (recomendada, porque el esquema cambia
+   cada vez que se añade algo al juego):
+
+   ```
+   python -m pip install pg8000
+   python herramientas/aplicar_sql.py
+   ```
+
+   La primera vez pide la cadena de conexión —en Supabase, botón **Connect**
+   arriba, pestaña *Session pooler*, copiar el URI— y la guarda en
+   `herramientas/.conexion`, que está fuera del repositorio. Las veces
+   siguientes no pregunta nada: un comando y listo.
+
+   **La manual:** abre **SQL Editor**, pega el contenido completo de
+   `herramientas/supabase.sql` y dale a *Run*.
 
 Al terminar salen tres comprobaciones y las tres tienen que dar bien:
 
@@ -37,8 +52,13 @@ Al terminar salen tres comprobaciones y las tres tienen que dar bien:
 > equipo podría borrar los resultados de todos. El archivo ya lo corrige
 > revocando todo antes de conceder; vuelve a ejecutarlo completo.
 
-Si alguna sale mal, vuelve a pegar el archivo entero: es idempotente, se puede
-ejecutar las veces que haga falta.
+Si alguna sale mal, vuelve a ejecutarlo entero: es idempotente, se puede
+correr las veces que haga falta sin romper ni borrar nada.
+
+> La cadena de conexión lleva la contraseña de tu base. El archivo
+> `herramientas/.conexion` está en `.gitignore` y el script nunca la muestra en
+> pantalla. Si algún día cambias la contraseña, borra ese archivo y volverá a
+> preguntarla.
 
 ## 2. Conectar el juego
 

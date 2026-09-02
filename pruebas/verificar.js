@@ -663,6 +663,37 @@ async function principal() {
   comprobar('  y no lanza excepciones', !rompió);
 
 
+  /* -------------------------- 4f. aplicar el esquema -------------------- */
+  titulo('APLICAR EL ESQUEMA');
+
+  const aplicador = fs.readFileSync(ruta.join(RAIZ, 'herramientas', 'aplicar_sql.py'), 'utf8');
+
+  /* La contraseña de la base no puede acabar en el repositorio jamás. */
+  const ignorados = fs.readFileSync(ruta.join(RAIZ, '.gitignore'), 'utf8');
+  comprobar('la cadena de conexión está fuera del repositorio',
+    /herramientas\/\.conexion/.test(ignorados));
+  comprobar('  y el aplicador no la escribe en pantalla',
+    /getpass/.test(aplicador) && !/print\(cad/.test(aplicador));
+
+  /* El troceador tuvo un fallo grave: descartaba los trozos que empezaban por
+     comentario, y con ellos el SQL que llevaban detrás. Aplicaba el esquema a
+     medias y en silencio. Esta prueba comprueba que no se pierde nada. */
+  const sqlTexto = fs.readFileSync(ruta.join(RAIZ, 'herramientas', 'supabase.sql'), 'utf8');
+  const imprescindibles = [
+    'create table if not exists equipos', 'create table if not exists intentos',
+    'create table if not exists sabotajes', 'create table if not exists organizadores',
+    'create or replace function sabotaje_ganado', 'create or replace function es_organizador',
+    'create trigger sabotajes_solo_ganados', 'create or replace view marcador'
+  ];
+  const ausentes = imprescindibles.filter(c => sqlTexto.indexOf(c) < 0);
+  comprobar('el esquema tiene todas las piezas', ausentes.length === 0,
+    ausentes.length ? 'faltan: ' + ausentes.join(', ') : imprescindibles.length + ' piezas');
+  comprobar('  el aplicador respeta los cuerpos de función',
+    /\$\$/.test(aplicador) && /dentro = not dentro/.test(aplicador));
+  comprobar('  y no descarta los trozos que empiezan por comentario',
+    /tiene_sql/.test(aplicador) && !/texto\.startswith\("--"\)/.test(aplicador));
+
+
   /* --------------------------------------------- 5. teclado ------------- */
   titulo('TECLADO');
   let bloqueada = false;

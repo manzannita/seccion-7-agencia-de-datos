@@ -11,6 +11,9 @@ __pycache__/
 .claude/
 skills-lock.json
 
+# La cadena de conexión a la base: lleva la contraseña. Jamás al repositorio.
+herramientas/.conexion
+
 # Material personal de referencia: fotos usadas para dibujar los personajes.
 # Se quedan en la máquina, no van al repositorio.
 fotos_forpix/
