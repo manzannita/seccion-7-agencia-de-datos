@@ -260,6 +260,32 @@ final si algo salió nuevo y hay que reimprimir.
 Si quieres códigos nuevos a propósito, borra `herramientas/rutas.json` y
 vuelve a generar.
 
+### Probar la ruta sin estropear nada
+
+La cacería **no guarda nada en ningún servidor**: el avance vive solo en el
+`localStorage` del teléfono que la hace. No hay ninguna lista de equipos que
+la hayan completado, así que no hay nada que marcar ni desmarcar. Recorre la
+ruta las veces que quieras con el código que quieras; a los equipos no les
+afecta, porque usarán sus propios teléfonos. Los códigos tampoco se gastan.
+
+Lo único que hay que cuidar: **si prestas el mismo teléfono a un equipo**
+después de probar, ese teléfono lleva tu avance. Si el equipo es distinto al
+que usaste, se borra solo al meter su código. Si es el mismo, se lo
+encontraría hecho.
+
+Para dejar un teléfono limpio:
+
+```
+https://manzannita.github.io/seccion-7-agencia-de-datos/pistas/?reiniciar=1
+```
+
+Borra el avance de ese teléfono y vuelve a pedir el código de arranque. Va en
+la dirección y no en un botón a propósito: un botón en pantalla se pulsa sin
+querer a media cacería.
+
+La otra opción, si solo quieres probar: hazlo en una ventana privada o de
+incógnito. Al cerrarla no queda nada.
+
 ### Cambiar lugares o retos
 
 Todo sale de `herramientas/pistas.json`. Cambia el `lugar`, el `acertijo`, la

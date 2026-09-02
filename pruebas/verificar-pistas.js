@@ -52,8 +52,9 @@ function nuevoDom(ficha, almacen) {
 
 /* Abre la pagina como si escanearan el cartel de esa ficha. El almacen se
    comparte entre cargas: es el mismo telefono. */
-function abrirPagina(ficha, almacen) {
+function abrirPagina(ficha, almacen, busca) {
   const ctx = nuevoDom(ficha, almacen);
+  if (busca) ctx.location.search = busca;
   ctx.window = ctx;
   vm.createContext(ctx);
   for (const f of ['js/pistas-datos.js', 'js/pistas.js']) {
@@ -62,7 +63,12 @@ function abrirPagina(ficha, almacen) {
   const html = fs.readFileSync(path.join(raiz, 'pistas/index.html'), 'utf8');
   const trozos = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
   if (!trozos.length) throw new Error('pistas/index.html no tiene script inline');
-  vm.runInContext(trozos[trozos.length - 1], ctx, { filename: 'index.html' });
+  try {
+    vm.runInContext(trozos[trozos.length - 1], ctx, { filename: 'index.html' });
+  } catch (e) {
+    /* La pagina corta a proposito cuando se reinicia el telefono. */
+    if (!/reiniciado/.test(e.message)) throw e;
+  }
   return ctx;
 }
 
@@ -282,6 +288,24 @@ async function probar() {
     await responder(ctx, respuestaDe[primera]);
     ok(cuantos(ctx) === 1, 'repetir la misma estacion no suma de mas');
     ok(/ya la ten/.test(aviso(ctx)), 'y avisa que esa ya la tenian');
+  }
+
+  /* ------------------ dejar el telefono limpio tras probar -------------- */
+  console.log('\nReiniciar el telefono');
+  {
+    const almacen = {};
+    let ctx = abrirPagina(null, almacen);
+    await meterCodigo(ctx, arranques[equipos[0]]);
+    const primera = rutas[equipos[0]][0];
+    ctx = await escanear(fichas[primera], almacen);
+    await responder(ctx, respuestaDe[primera]);
+    ok(cuantos(ctx) === 1, 'se prueba la ruta y queda avance en el telefono');
+
+    abrirPagina(null, almacen, '?reiniciar=1');
+    const limpio = abrirPagina(null, almacen);
+    ok(cuantos(limpio) === 0, 'con ?reiniciar=1 el avance desaparece');
+    ok(!avance(limpio).equipo, 'y ya no recuerda de que equipo era');
+    ok(!limpio.nodos.pasoArranque.hidden, 'vuelve a pedir el codigo de arranque');
   }
 
   /* ------------- la respuesta sola no abre nada desde fuera ------------- */

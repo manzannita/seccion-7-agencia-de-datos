@@ -111,6 +111,19 @@ if (!R.datos) {
   $("titulo").textContent = R.datos.titulo || "RUTA DE ACCESO";
   const TOTAL = R.total();
 
+  /* Dejar el telefono como recien salido de fabrica: .../pistas/?reiniciar=1
+     Es para la organizacion, sobre todo para probar la ruta y devolver el
+     telefono limpio. Va en la direccion y no en un boton a proposito: un
+     boton en pantalla se pulsa sin querer a media cacería. */
+  if (/[?&]reiniciar=1/.test(location.search || "")) {
+    R.guardar({});
+    document.body.innerHTML =
+      "<h1 style='color:#1fb8d4'>TELÉFONO LIMPIO</h1>" +
+      "<p>Se borró el avance que hubiera en este teléfono.</p>" +
+      "<p><a style='color:#1fb8d4' href='./'>Empezar de nuevo</a></p>";
+    throw new Error("reiniciado");     /* no sigas montando la pagina */
+  }
+
   /* La ficha del cartel viaja en la direccion: .../pistas/?e=xxxx */
   const ficha = (function () {
     const m = /[?&]e=([A-Za-z0-9]+)/.exec(location.search || "");
